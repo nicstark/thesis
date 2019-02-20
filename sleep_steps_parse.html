@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<a target="_blank" style="outline:none;"><canvas width="960" height="960"></canvas></a>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script>
+
+
+
+let canvas = document.querySelector("canvas");
+
+var width = canvas.width,
+    height = canvas.height;
+    radius = Math.min(width, height) / 4;
+
+let ctx = canvas.getContext('2d');
+
+var PIXEL_RATIO = (function () {
+    var ctx = document.querySelector("canvas").getContext("2d"),
+        dpr = window.devicePixelRatio || 1,
+        bsr = ctx.webkitBackingStorePixelRatio ||
+              ctx.mozBackingStorePixelRatio ||
+              ctx.msBackingStorePixelRatio ||
+              ctx.oBackingStorePixelRatio ||
+              ctx.backingStorePixelRatio || 1;
+
+    return dpr / bsr;
+})();
+
+
+createHiDPICanvas = function(w, h, ratio) {
+    if (!ratio) { ratio = PIXEL_RATIO; }
+    var can = document.createElement("canvas");
+    can.width = w * ratio;
+    can.height = h * ratio;
+    can.style.width = w + "px";
+    can.style.height = h + "px";
+    can.getContext("2d").setTransform(ratio, 0, 0, ratio, 0, 0);
+    return can;
+}
+
+//Create canvas with the device resolution.
+var myCanvas = createHiDPICanvas(500, 250);
+let activityTotal = {};
+
+var timechunk;
+var timeChunkArray = [];
+
+
+
+  function activityParseFunction(activityData){
+
+  const fifteen = activityData.filter(activity => (activity[Object.keys(activity)[1]].includes("2017-05-09")));
+
+  let activityCount = fifteen.map(chunk => {
+    if (typeof(activityTotal[Object.values(chunk)[2]]) != "number"){
+      activityTotal[Object.values(chunk)[2]] = 0
+    }
+    activityTotal[Object.values(chunk)[2]] = parseInt(activityTotal[Object.values(chunk)[2]]) + parseInt(Object.values(chunk)[0]);
+  }, 0);
+//  console.table(fifteen);
+  console.log(activityTotal)
+};
+
+  function timeDegrees (time){
+    time = parseTimeMilli(time)
+    degreeTime = time * (Math.PI / 180)
+  }
+
+
+
+  function fitParseFunction(data) {
+    data.forEach(function(row){
+      if (row[ 'Sleep duration (ms)' ] > 0){
+        row[ 'Sleep duration (ms)' ] = parseInt(row[ 'Sleep duration (ms)' ])
+      } else row[ 'Sleep duration (ms)' ] = 0;
+      if (row[ 'Deep sleeping duration (ms)' ] > 0){
+        row[ 'Deep sleeping duration (ms)' ] = parseInt(row[ 'Deep sleeping duration (ms)' ])
+      } else row[ 'Deep sleeping duration (ms)' ] = 0;
+      if (row[ 'Step count' ] > 0){
+        row[ 'Step count' ] = parseInt(row[ 'Step count' ])
+      } else row[ 'Step count' ] = 0;
+    });
+
+      const lightCount = data.reduce((total, chunk) => {
+        return total + chunk[ 'Sleep duration (ms)' ];
+      }, 0);
+      const deepCount = data.reduce((total, chunk) => {
+        return total + chunk[ 'Deep sleeping duration (ms)' ];
+      }, 0);
+      const stepCount = data.reduce((total, chunk) => {
+        return total + chunk[ 'Step count' ];
+      }, 0);
+
+
+      data.forEach((chunk) => {
+        var timechunk = chunk[ 'Start time' ];
+        timechunk = timechunk.slice(0,5);
+        timechunk= (Number(timechunk.split(':')[0])*60+Number(timechunk.split(':')[1]))*1000;
+        timeChunkArray.push(timechunk);
+        return console.log(timechunk);
+      });
+
+      console.log(timeChunkArray)
+
+      //console.log(timeStamp)
+      const sleepCount = lightCount + deepCount;
+      const sleepCountArray = [sleepCount, 86400000];
+
+      // console.log((deepCount/60000)/60)
+      //console.log((sleepCount/60000)/60)
+      //console.log(sleepCountArray)
+      //console.log(timeStamp)
+
+
+      let sleepColors = ["#F1F1F1","white"]
+      let deepColors = ["#5F5F5F","white"]
+
+      let deepRadius =  ((deepCount/sleepCountArray[0])*radius);
+
+      let rotateOffset = ((sleepCountArray[0]/sleepCountArray[1]))
+      let rotateOffsetFinal = (90 + ((rotateOffset/2)*360));
+
+      var arc = d3.arc()
+          .outerRadius(radius)
+          .innerRadius(0)
+          .context(ctx);
+
+      var deepArc = d3.arc()
+          .outerRadius(deepRadius)
+          .innerRadius(0)
+          .context(ctx);
+
+
+      var pie = d3.pie()
+          .sort(null)
+          .value(function(d) { return d; });
+
+      ctx.translate(width / 2, height / 2);
+      ctx.rotate(rotateOffsetFinal * Math.PI / 180);
+
+      var sleepArcs = pie(sleepCountArray);
+
+      sleepArcs.forEach(function(d, i) {
+        ctx.beginPath();
+        arc(d);
+        ctx.fillStyle = sleepColors[i];
+        ctx.fill();
+      });
+
+      var deepArcs = pie(sleepCountArray);
+
+      deepArcs.forEach(function(d, i) {
+        ctx.beginPath();
+        deepArc(d);
+        ctx.fillStyle = deepColors[i];
+        ctx.fill();
+      });
+  };
+
+  d3.csv("test_data/2017-05-09.csv", function(fitData){
+      fitParseFunction(fitData);
+      console.log(fitData)
+    });
+
+  d3.csv("test_data/rescuetime-activity-history.csv", function(activityData){
+      activityParseFunction(activityData);
+    });
+
+</script>
