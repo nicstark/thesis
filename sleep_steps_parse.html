@@ -44,6 +44,8 @@ let activityTotal = {};
 
 var timechunk;
 var timeChunkArray = [];
+var sleepChunkArray = [];
+var deepChunkArray = [];
 
 
 
@@ -82,9 +84,11 @@ var timeChunkArray = [];
     });
 
       const lightCount = data.reduce((total, chunk) => {
+        sleepChunkArray.push(chunk[ 'Sleep duration (ms)' ]);
         return total + chunk[ 'Sleep duration (ms)' ];
       }, 0);
       const deepCount = data.reduce((total, chunk) => {
+        deepChunkArray.push(chunk[ 'Deep sleeping duration (ms)' ]);
         return total + chunk[ 'Deep sleeping duration (ms)' ];
       }, 0);
       const stepCount = data.reduce((total, chunk) => {
@@ -100,7 +104,7 @@ var timeChunkArray = [];
         return console.log(timechunk);
       });
 
-      console.log(timeChunkArray)
+      console.log(sleepChunkArray)
 
       //console.log(timeStamp)
       const sleepCount = lightCount + deepCount;
@@ -120,6 +124,10 @@ var timeChunkArray = [];
       let rotateOffset = ((sleepCountArray[0]/sleepCountArray[1]))
       let rotateOffsetFinal = (90 + ((rotateOffset/2)*360));
 
+      var sleepColorScale = d3.scaleLinear()
+                                  .domain([-900000,900000])
+                                  .range([0,255]);
+
       var arc = d3.arc()
           .outerRadius(radius)
           .innerRadius(0)
@@ -138,24 +146,60 @@ var timeChunkArray = [];
       ctx.translate(width / 2, height / 2);
       ctx.rotate(rotateOffsetFinal * Math.PI / 180);
 
-      var sleepArcs = pie(sleepCountArray);
+      var sleepArcs = pie(timeChunkArray);
 
       sleepArcs.forEach(function(d, i) {
         ctx.beginPath();
         arc(d);
-        ctx.fillStyle = sleepColors[i];
+        ctx.fillStyle = sleepColors[0];
         ctx.fill();
       });
 
-      var deepArcs = pie(sleepCountArray);
-
-      deepArcs.forEach(function(d, i) {
-        ctx.beginPath();
-        deepArc(d);
-        ctx.fillStyle = deepColors[i];
-        ctx.fill();
-      });
+      // var deepArcs = pie(sleepCountArray);
+      //
+      // deepArcs.forEach(function(d, i) {
+      //   ctx.beginPath();
+      //   deepArc(d);
+      //   ctx.fillStyle = deepColors[i];
+      //   ctx.fill();
+      // });
   };
+  //     var arc = d3.arc()
+  //         .outerRadius(radius)
+  //         .innerRadius(0)
+  //         .context(ctx);
+  //
+  //     var deepArc = d3.arc()
+  //         .outerRadius(deepRadius)
+  //         .innerRadius(0)
+  //         .context(ctx);
+  //
+  //
+  //     var pie = d3.pie()
+  //         .sort(null)
+  //         .value(function(d) { return d; });
+  //
+  //     ctx.translate(width / 2, height / 2);
+  //     ctx.rotate(rotateOffsetFinal * Math.PI / 180);
+  //
+  //     var sleepArcs = pie(sleepCountArray);
+  //
+  //     sleepArcs.forEach(function(d, i) {
+  //       ctx.beginPath();
+  //       arc(d);
+  //       ctx.fillStyle = sleepColors[i];
+  //       ctx.fill();
+  //     });
+  //
+  //     var deepArcs = pie(sleepCountArray);
+  //
+  //     deepArcs.forEach(function(d, i) {
+  //       ctx.beginPath();
+  //       deepArc(d);
+  //       ctx.fillStyle = deepColors[i];
+  //       ctx.fill();
+  //     });
+  // };
 
   d3.csv("test_data/2017-05-09.csv", function(fitData){
       fitParseFunction(fitData);
