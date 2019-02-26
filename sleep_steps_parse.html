@@ -2,9 +2,8 @@
 <meta charset="utf-8">
 <a target="_blank" style="outline:none;"><canvas width="960" height="960"></canvas></a>
 <script src="https://d3js.org/d3.v4.min.js"></script>
+
 <script>
-
-
 
 let canvas = document.querySelector("canvas");
 
@@ -40,37 +39,42 @@ createHiDPICanvas = function(w, h, ratio) {
 
 //Create canvas with the device resolution.
 var myCanvas = createHiDPICanvas(500, 250);
+
 let activityTotal = {};
-
-var timechunk;
-var timeChunkArray = [];
-var sleepChunkArray = [];
-var deepChunkArray = [];
-
+let timechunk;
+let timeChunkArray = [];
+let sleepChunkArray = [];
+let deepChunkArray = [];
 
 
-  function activityParseFunction(activityData){
 
-  const fifteen = activityData.filter(activity => (activity[Object.keys(activity)[1]].includes("2017-05-09")));
+function activityParseFunction(activityData){
 
-  let activityCount = fifteen.map(chunk => {
+  const day = activityData.filter(activity => (activity[Object.keys(activity)[1]].includes("2017-05-09")));
+
+  let activityCount = day.map(chunk => {
     if (typeof(activityTotal[Object.values(chunk)[2]]) != "number"){
       activityTotal[Object.values(chunk)[2]] = 0
-    }
+    };
+
     activityTotal[Object.values(chunk)[2]] = parseInt(activityTotal[Object.values(chunk)[2]]) + parseInt(Object.values(chunk)[0]);
   }, 0);
-//  console.table(fifteen);
+
   console.log(activityTotal)
 };
 
-  function timeDegrees (time){
+function timeDegrees (time){
     time = parseTimeMilli(time)
     degreeTime = time * (Math.PI / 180)
-  }
+  };
+
+// var degreeScale = d3.scaleLinear()
+//   .domain([0,360]),
+//   .range([0,86400000]);
 
 
 
-  function fitParseFunction(data) {
+function fitParseFunction(data) {
     data.forEach(function(row){
       if (row[ 'Sleep duration (ms)' ] > 0){
         row[ 'Sleep duration (ms)' ] = parseInt(row[ 'Sleep duration (ms)' ])
