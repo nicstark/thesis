@@ -13,6 +13,7 @@ var width = canvas.width,
 
 let ctx = canvas.getContext('2d');
 
+// This is to try and fix blurry edges on HDPI screens
 var PIXEL_RATIO = (function () {
     var ctx = document.querySelector("canvas").getContext("2d"),
         dpr = window.devicePixelRatio || 1,
@@ -40,41 +41,61 @@ createHiDPICanvas = function(w, h, ratio) {
 //Create canvas with the device resolution.
 var myCanvas = createHiDPICanvas(500, 250);
 
+//Declare variables
 let activityTotal = {};
 let timechunk;
 let timeChunkArray = [];
 let sleepChunkArray = [];
 let deepChunkArray = [];
+let dayChoice = "2017-05-09";
+let sleepColors = ["#F1F1F1","white"]
+let deepColors = ["#5F5F5F","white"]
 
+//This function parses RescueTime data
 
+function rescueTimeParse(activityData){
 
-function activityParseFunction(activityData){
+  //Using the dayChoice variable we filter out only the rows that pertain to that day
+  const singleDayFiltered = activityData.filter(activity => (activity[Object.keys(activity)[1]].includes(dayChoice)));
 
-  const day = activityData.filter(activity => (activity[Object.keys(activity)[1]].includes("2017-05-09")));
+  console.log(singleDayFiltered)
 
-  let activityCount = day.map(chunk => {
-    if (typeof(activityTotal[Object.values(chunk)[2]]) != "number"){
-      activityTotal[Object.values(chunk)[2]] = 0
+  //Here we fill in empty cells with zeroes
+  let activityCount = singleDayFiltered.map(currentRow => {
+    if (typeof(activityTotal[Object.values(currentRow)[2]]) != "number"){
+      activityTotal[Object.values(currentRow)[2]] = 0
     };
 
-    activityTotal[Object.values(chunk)[2]] = parseInt(activityTotal[Object.values(chunk)[2]]) + parseInt(Object.values(chunk)[0]);
+    //this part builds and objects where each key is an activity and tallies up the values for each over the entire day
+    activityTotal[Object.values(currentRow)[2]] = parseInt(activityTotal[Object.values(currentRow)[2]]) + parseInt(Object.values(currentRow)[0]);
   }, 0);
 
   console.log(activityTotal)
 };
 
-function timeDegrees (time){
-    time = parseTimeMilli(time)
-    degreeTime = time * (Math.PI / 180)
+//this is a scale meant to convert milliseconds to radial degrees
+var degreeScale = d3.scaleLinear()
+  .domain([0,86400000])
+  .range([0,360]);
+
+//this scale uses the amount of deep sleep in that period to generate a color value
+var sleepColorScale = d3.scaleLinear()
+                              .domain([-900000,900000])
+                              .range([0,255]);
+
+  //here we're converting Google Fit timestamps into milliseconds
+function timestampMilliConverter(entry){
+    timechunk = entry[ 'Start time' ].slice(0,5);
+    timechunk = (Number(timechunk.split(':')[0])*60+Number(timechunk.split(':')[1]))*1000;
+    timeChunkArray.push(timechunk)
+    return;
   };
 
-// var degreeScale = d3.scaleLinear()
-//   .domain([0,360]),
-//   .range([0,86400000]);
 
-
-
-function fitParseFunction(data) {
+//This function parses Google Fit data (sleep, deep sleep, step count)
+function fitParse(data) {
+  //here we're iterating over each row and converting the values to integers
+  //where the value is non-existant we mark it zero
     data.forEach(function(row){
       if (row[ 'Sleep duration (ms)' ] > 0){
         row[ 'Sleep duration (ms)' ] = parseInt(row[ 'Sleep duration (ms)' ])
@@ -87,6 +108,7 @@ function fitParseFunction(data) {
       } else row[ 'Step count' ] = 0;
     });
 
+    //here we use reduce functions to tally up the amount of each
       const lightCount = data.reduce((total, chunk) => {
         sleepChunkArray.push(chunk[ 'Sleep duration (ms)' ]);
         return total + chunk[ 'Sleep duration (ms)' ];
@@ -99,65 +121,47 @@ function fitParseFunction(data) {
         return total + chunk[ 'Step count' ];
       }, 0);
 
-
-      data.forEach((chunk) => {
-        var timechunk = chunk[ 'Start time' ];
-        timechunk = timechunk.slice(0,5);
-        timechunk= (Number(timechunk.split(':')[0])*60+Number(timechunk.split(':')[1]))*1000;
-        timeChunkArray.push(timechunk);
-        return console.log(timechunk);
-      });
-
-      console.log(sleepChunkArray)
-
-      //console.log(timeStamp)
+      //adding up the total count
       const sleepCount = lightCount + deepCount;
       const sleepCountArray = [sleepCount, 86400000];
 
-      // console.log((deepCount/60000)/60)
-      //console.log((sleepCount/60000)/60)
-      //console.log(sleepCountArray)
-      //console.log(timeStamp)
 
-
-      let sleepColors = ["#F1F1F1","white"]
-      let deepColors = ["#5F5F5F","white"]
-
-      let deepRadius =  ((deepCount/sleepCountArray[0])*radius);
-
-      let rotateOffset = ((sleepCountArray[0]/sleepCountArray[1]))
+      let deepRadius =  ((deepCount/sleepCount)*radius);
+      let rotateOffset = (sleepCount/86400000)
       let rotateOffsetFinal = (90 + ((rotateOffset/2)*360));
 
-      var sleepColorScale = d3.scaleLinear()
-                                  .domain([-900000,900000])
-                                  .range([0,255]);
-
-      var arc = d3.arc()
-          .outerRadius(radius)
-          .innerRadius(0)
-          .context(ctx);
-
-      var deepArc = d3.arc()
-          .outerRadius(deepRadius)
-          .innerRadius(0)
-          .context(ctx);
-
-
-      var pie = d3.pie()
-          .sort(null)
-          .value(function(d) { return d; });
-
-      ctx.translate(width / 2, height / 2);
-      ctx.rotate(rotateOffsetFinal * Math.PI / 180);
-
-      var sleepArcs = pie(timeChunkArray);
-
-      sleepArcs.forEach(function(d, i) {
-        ctx.beginPath();
-        arc(d);
-        ctx.fillStyle = sleepColors[0];
-        ctx.fill();
+      const test = data.forEach((chunk) => {
+        timestampMilliConverter(chunk)
       });
+
+
+      //
+      // var arc = d3.arc()
+      //     .outerRadius(radius)
+      //     .innerRadius(0)
+      //     .context(ctx);
+      //
+      // var deepArc = d3.arc()
+      //     .outerRadius(deepRadius)
+      //     .innerRadius(0)
+      //     .context(ctx);
+      //
+      //
+      // var pie = d3.pie()
+      //     .sort(null)
+      //     .value(function(d) { return d; });
+      //
+      // ctx.translate(width / 2, height / 2);
+      // ctx.rotate(rotateOffsetFinal * Math.PI / 180);
+      //
+      // var sleepArcs = pie(timeChunkArray);
+      //
+      // sleepArcs.forEach(function(d, i) {
+      //   ctx.beginPath();
+      //   arc(d);
+      //   ctx.fillStyle = sleepColorScale(d);
+      //   ctx.fill();
+      // });
 
       // var deepArcs = pie(sleepCountArray);
       //
@@ -168,6 +172,9 @@ function fitParseFunction(data) {
       //   ctx.fill();
       // });
   };
+
+
+  
   //     var arc = d3.arc()
   //         .outerRadius(radius)
   //         .innerRadius(0)
@@ -205,13 +212,12 @@ function fitParseFunction(data) {
   //     });
   // };
 
-  d3.csv("test_data/2017-05-09.csv", function(fitData){
-      fitParseFunction(fitData);
-      console.log(fitData)
+  d3.csv("test_data/" + dayChoice + ".csv", function(fitData){
+      fitParse(fitData);
     });
 
-  d3.csv("test_data/rescuetime-activity-history.csv", function(activityData){
-      activityParseFunction(activityData);
+  d3.csv("test_data/rescuetime-activity-history.csv", function(rescueTimeData){
+      rescueTimeParse(rescueTimeData);
     });
 
 </script>
