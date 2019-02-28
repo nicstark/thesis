@@ -1,0 +1,24 @@
+{
+  "name": "thesis",
+  "version": "1.0.0",
+  "description": "thesis project",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nicstark/thesis.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nicstark/thesis/issues"
+  },
+  "homepage": "https://github.com/nicstark/thesis#readme",
+  "dependencies": {
+    "d3.js": "0.0.2-security",
+    "node-mbox": "^1.0.0",
+    "vcf.js": "^0.3.0"
+  }
+}

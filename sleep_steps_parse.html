@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
-<a target="_blank" style="outline:none;"><canvas width="960" height="960"></canvas></a>
+<a target="_blank" style="outline:none;"><canvas width="960" height="1960"></canvas></a>
 <script src="https://d3js.org/d3.v4.min.js"></script>
 
 <script>
@@ -43,22 +43,50 @@ var myCanvas = createHiDPICanvas(500, 250);
 
 //Declare variables
 let activityTotal = {};
+let activityArray = [];
+let newArray = [];
 let timechunk;
+let result;
+let max;
+let citiDateFix;
+let transactions;
+let singleDayFiltered;
+let xPos = 0 - width/2;
+let transactionPos = 0 - width/2;
 let timeChunkArray = [];
 let sleepChunkArray = [];
 let deepChunkArray = [];
-let dayChoice = "2017-05-09";
+let dayChoice = "2017-05-10";
 let sleepColors = ["#F1F1F1","white"]
 let deepColors = ["#5F5F5F","white"]
+
+
+function citiParse(citiData){
+  let citiDateFix = citiData.map(currentRow => {
+    let oldDate = currentRow['Date'].split("/");
+    let newDate = oldDate[2] + "-" + oldDate[0] + "-" + oldDate[1];
+    currentRow['Date'] = newDate;
+    return currentRow;
+
+  })
+  transactions = citiDateFix.filter(row => (row['Date'].includes(dayChoice)));
+  console.log(transactions);
+
+  let transactionMax = d3.max(transactions, function(d) { return +d['Debit']} );
+
+  console.log(transactionMax);
+
+  transationDraw(transactionMax);
+
+}
 
 //This function parses RescueTime data
 
 function rescueTimeParse(activityData){
 
   //Using the dayChoice variable we filter out only the rows that pertain to that day
-  const singleDayFiltered = activityData.filter(activity => (activity[Object.keys(activity)[1]].includes(dayChoice)));
+  singleDayFiltered = activityData.filter(activity => (activity[Object.keys(activity)[1]].includes(dayChoice)));
 
-  console.log(singleDayFiltered)
 
   //Here we fill in empty cells with zeroes
   let activityCount = singleDayFiltered.map(currentRow => {
@@ -68,9 +96,68 @@ function rescueTimeParse(activityData){
 
     //this part builds and objects where each key is an activity and tallies up the values for each over the entire day
     activityTotal[Object.values(currentRow)[2]] = parseInt(activityTotal[Object.values(currentRow)[2]]) + parseInt(Object.values(currentRow)[0]);
+
+    newArray.push({
+      "name" : Object.values(currentRow)[2],
+      "amount" : parseInt(activityTotal[Object.values(currentRow)[2]]) + parseInt(Object.values(currentRow)[0]),
+      "category" : Object.values(currentRow)[4]
+    })
   }, 0);
 
-  console.log(activityTotal)
+    activityArray = Object.entries(activityTotal);
+
+    activityArray.sort(function(x, y){
+   return d3.ascending(x[1], y[1]);
+    })
+    let max = d3.max(activityArray, function(d) { return +d[1]} );
+
+    activityDraw(max)
+
+};
+
+function transationDraw(transactionMax){
+
+    var transactionScalePos = d3.scaleLinear()
+      .domain([0, transactionMax])
+      .range([10, width - 10]);
+
+
+    var transactionScale = d3.scaleLinear()
+      .domain([0, transactionMax])
+      .range([0, 100]);
+
+    transactions.forEach(function(d, i) {
+      ctx.beginPath();
+      console.log(transactionScale(d['Debit']));
+      ctx.rect(transactionPos, -1*transactionScale(d['Debit']/2), transactionScale(d['Debit']), transactionScale(d['Debit']));
+      transactionPos = transactionPos + transactionScale(d['Debit'])+2;
+      ctx.fillStyle="blue";
+      ctx.fill();
+      ctx.closePath();
+    });
+}
+
+
+function activityDraw(max){
+
+  var scalePos = d3.scaleLinear()
+    .domain([0, max])
+    .range([10, width - 10]);
+
+
+  var scale = d3.scaleLinear()
+    .domain([0, max])
+    .range([0, 100]);
+
+
+activityArray.forEach(function(d, i) {
+  ctx.beginPath();
+  ctx.rect(-1*scale(d[1]/2), xPos, scale(d[1]), scale(d[1]));
+  xPos = xPos + scale(d[1])+2;
+  ctx.fillStyle="grey";
+  ctx.fill();
+  ctx.closePath();
+});
 };
 
 //this is a scale meant to convert milliseconds to radial degrees
@@ -134,83 +221,50 @@ function fitParse(data) {
         timestampMilliConverter(chunk)
       });
 
-
-      //
-      // var arc = d3.arc()
-      //     .outerRadius(radius)
-      //     .innerRadius(0)
-      //     .context(ctx);
-      //
-      // var deepArc = d3.arc()
-      //     .outerRadius(deepRadius)
-      //     .innerRadius(0)
-      //     .context(ctx);
-      //
-      //
-      // var pie = d3.pie()
-      //     .sort(null)
-      //     .value(function(d) { return d; });
-      //
-      // ctx.translate(width / 2, height / 2);
-      // ctx.rotate(rotateOffsetFinal * Math.PI / 180);
-      //
-      // var sleepArcs = pie(timeChunkArray);
-      //
-      // sleepArcs.forEach(function(d, i) {
-      //   ctx.beginPath();
-      //   arc(d);
-      //   ctx.fillStyle = sleepColorScale(d);
-      //   ctx.fill();
+      // activityTotal.forEach(function(d, i) {
+      //   context.beginPath();
+      //   context.rect(scale(d), 150, 10, 10);
+      //   context.fillStyle="red";
+      //   context.fill();
+      //   context.closePath();
       // });
 
-      // var deepArcs = pie(sleepCountArray);
-      //
-      // deepArcs.forEach(function(d, i) {
-      //   ctx.beginPath();
-      //   deepArc(d);
-      //   ctx.fillStyle = deepColors[i];
-      //   ctx.fill();
-      // });
+      var arc = d3.arc()
+          .outerRadius(radius)
+          .innerRadius(0)
+          .context(ctx);
+
+      var deepArc = d3.arc()
+          .outerRadius(deepRadius)
+          .innerRadius(0)
+          .context(ctx);
+
+
+      var pie = d3.pie()
+          .sort(null)
+          .value(function(d) { return d; });
+
+      ctx.translate(width / 2, height / 2);
+    //  ctx.rotate(rotateOffsetFinal * Math.PI / 180);
+
+      var sleepArcs = pie([50,50]);
+
+      sleepArcs.forEach(function(d, i) {
+        ctx.beginPath();
+        arc(d);
+        ctx.fillStyle = sleepColors[i];
+        ctx.fill();
+      });
+
+      var deepArcs = pie([50,50]);
+
+      deepArcs.forEach(function(d, i) {
+        ctx.beginPath();
+        deepArc(d);
+        ctx.fillStyle = deepColors[i];
+        ctx.fill();
+      });
   };
-
-
-  
-  //     var arc = d3.arc()
-  //         .outerRadius(radius)
-  //         .innerRadius(0)
-  //         .context(ctx);
-  //
-  //     var deepArc = d3.arc()
-  //         .outerRadius(deepRadius)
-  //         .innerRadius(0)
-  //         .context(ctx);
-  //
-  //
-  //     var pie = d3.pie()
-  //         .sort(null)
-  //         .value(function(d) { return d; });
-  //
-  //     ctx.translate(width / 2, height / 2);
-  //     ctx.rotate(rotateOffsetFinal * Math.PI / 180);
-  //
-  //     var sleepArcs = pie(sleepCountArray);
-  //
-  //     sleepArcs.forEach(function(d, i) {
-  //       ctx.beginPath();
-  //       arc(d);
-  //       ctx.fillStyle = sleepColors[i];
-  //       ctx.fill();
-  //     });
-  //
-  //     var deepArcs = pie(sleepCountArray);
-  //
-  //     deepArcs.forEach(function(d, i) {
-  //       ctx.beginPath();
-  //       deepArc(d);
-  //       ctx.fillStyle = deepColors[i];
-  //       ctx.fill();
-  //     });
-  // };
 
   d3.csv("test_data/" + dayChoice + ".csv", function(fitData){
       fitParse(fitData);
@@ -218,6 +272,10 @@ function fitParse(data) {
 
   d3.csv("test_data/rescuetime-activity-history.csv", function(rescueTimeData){
       rescueTimeParse(rescueTimeData);
+    });
+
+  d3.csv("test_data/Citi.csv", function(citiData){
+      citiParse(citiData);
     });
 
 </script>
