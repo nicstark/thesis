@@ -1,8 +1,8 @@
 {
   "name": "thesis",
   "version": "1.0.0",
-  "description": "thesis project",
-  "main": "index.js",
+  "description": "",
+  "main": "parse.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -17,8 +17,8 @@
   },
   "homepage": "https://github.com/nicstark/thesis#readme",
   "dependencies": {
-    "d3.js": "0.0.2-security",
-    "node-mbox": "^1.0.0",
-    "vcf.js": "^0.3.0"
+    "d3": "^5.9.2",
+    "node-fetch": "^2.3.0",
+    "node-fetch-polyfill": "^2.0.6"
   }
 }
