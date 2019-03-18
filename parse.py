@@ -1,11 +1,11 @@
+import os
 import csv
 import json
 from datetime import datetime
 
-
 myDict = {}
 myDict['Transactions'] = []
-myDictDay = []
+myDict['Activity'] = []
 epoch = datetime.utcfromtimestamp(0)
 dayChoice = "2017-05-10";
 
@@ -60,19 +60,38 @@ with open ('test_data/USAA_download.csv', 'r') as usaa_csv:
         #print(line)
         myDict['Transactions'].append(line)
         #csv_writer.writerow(s)
+        
 myDict['Transactions'] = sorted(myDict['Transactions'], key=lambda k: k['Date']) 
 
+for filename in os.listdir('test_data/Fit Data'):
+    if filename.endswith(".csv"):
+        with open ('test_data/Fit Data/' + filename, 'r') as fit_csv:
+            fit_reader = csv.DictReader(fit_csv)
     
+            for line in fit_reader:
+                new_date = dayChoice + " " + line['Start time'][0:8]
+                t = datetime.strptime(new_date, "%Y-%m-%d %X")
+                milli = unix_time_millis(t)
+                line['Start time'] = int(milli)        
+                
+                t = datetime.strptime(dayChoice + " " + line['End time'][0:8], "%Y-%m-%d %X")
+                milli = unix_time_millis(t)
+                line['End time'] = int(milli)
+                myDict['Activity'].append(line)
+                continue
+            else:
+                continue
+        
+        
+with open ('test_data/rescuetime-activity-history.csv', 'r') as rescue_csv:
+    rescue_reader = csv.DictReader(rescue_csv)
+    rescue_reader.fieldnames = ['Date','Title', 'Details','Category','Type','Duration']
+
+    for line in rescue_reader:
+        line['Date'] = datetime.strptime(line['Date'][0:19], "%Y-%m-%d %X")
+
+        #print(line)
+    
+
 with open('data.txt', 'w') as outfile:  
     json.dump(myDict, outfile)
-
-for transaction in myDict['Transactions']:
-    if transaction['Date'] == dayChoiceMilli:
-        myDictDay.append(transaction)
-        print(transaction['Date'])
-    
-with open(dayChoice + '.txt', 'w') as outfile:  
-    json.dump(myDictDay, outfile)
-    
-
-

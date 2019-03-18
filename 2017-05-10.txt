@@ -1,1 +1,0 @@
-[{"Status": "Cleared", "Date": 1494374400000, "Description": "ONNA CAFES ESPECIALES  BARCELONA     ESP\n", "Amount": "-9.26"}, {"Status": "Cleared", "Date": 1494374400000, "Description": "HOSTEL WORLD           INTERNET      IRL\n", "Amount": "-42.08"}, {"Status": "Cleared", "Date": 1494374400000, "Description": "MACNIFICOS             BARCELONA     ESP\n", "Amount": "-57.72"}]
