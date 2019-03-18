@@ -90,8 +90,6 @@ with open ('test_data/rescuetime-activity-history.csv', 'r') as rescue_csv:
     for line in rescue_reader:
         line['Date'] = datetime.strptime(line['Date'][0:19], "%Y-%m-%d %X")
 
-        #print(line)
-    
 
 with open('data.txt', 'w') as outfile:  
     json.dump(myDict, outfile)
