@@ -2,10 +2,14 @@ import os
 import csv
 import json
 from datetime import datetime
+from bs4 import BeautifulSoup, SoupStrainer
+import re
 
 myDict = {}
 myDict['Transactions'] = []
 myDict['Activity'] = []
+myDict['Screen Activity'] = []
+myDict['Search'] = []
 epoch = datetime.utcfromtimestamp(0)
 dayChoice = "2017-05-10";
 
@@ -88,7 +92,28 @@ with open ('test_data/rescuetime-activity-history.csv', 'r') as rescue_csv:
     rescue_reader.fieldnames = ['Date','Title', 'Details','Category','Type','Duration']
 
     for line in rescue_reader:
-        line['Date'] = datetime.strptime(line['Date'][0:19], "%Y-%m-%d %X")
+        t = datetime.strptime(line['Date'][0:19], "%Y-%m-%d %X")
+        milli = unix_time_millis(t)
+        line['Date'] = milli
+        myDict['Screen Activity'].append(line)
+    
+filename = 'test_data/MyActivity.html'
+search_data = open(filename, "r").read()
+#soup = BeautifulSoup(search_data, 'html.parser')
+#product = SoupStrainer('div',{'class':"content-cell mdl-cell mdl-cell--6-col mdl-typography--body-1}"})
+product = SoupStrainer('div','content-cell mdl-cell mdl-cell--6-col mdl-typography--body-1')
+soup = BeautifulSoup(search_data,parse_only=product,features="html.parser")
+for elem in soup:
+    myDict['Search'].append(elem.get_text())
+#     print(tag), 
+
+# for link in soup.find_all('div', attrs={'class="content-cell mdl-cell mdl-cell--6-col mdl-typography--body-1}"'}):
+#     myDict['Search']['Terms'] = link
+#     print(myDict['Search']['Terms'])
+
+    #print(link)
+print(myDict['Search'])
+
 
 
 with open('data.txt', 'w') as outfile:  
