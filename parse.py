@@ -1,32 +1,44 @@
 import os
 import csv
 import json
+import ijson
 from datetime import datetime
+import lxml
 from bs4 import BeautifulSoup, SoupStrainer
-import re
+from ics import Calendar, Event
+
 
 myDict = {}
 myDict['Transactions'] = []
 myDict['Activity'] = []
 myDict['Screen Activity'] = []
 myDict['Search'] = []
+myDict['Calendar'] = []
+myDict['Location'] = []
 epoch = datetime.utcfromtimestamp(0)
-dayChoice = "2017-05-10";
+root_path = "C:/Users/eufou/Desktop/Data/"
+citi_path = "Financial/Citi.CSV"
+usaa_path = "Financial/USAA_download.csv"
+fit_path = "Google/Fit/Daily Aggregations/"
+rescue_path = "Screen Activity/rescuetime-activity-history.csv"
+search_path = "Google/My Activity/Search/MyActivity.html"
+voice_path = "Google/Voice/"
+calendar_path = "Google/Calendar/"
+location_path = "Google/Location History/Location History.json"
+dayChoice = "2017-05-10"
+fixDay = 0
 
 def unix_time_millis(dt):
     return (dt - epoch).total_seconds() * 1000.0
-    
+
 dayChoiceObject = datetime.strptime(dayChoice, "%Y-%m-%d")
 dayChoiceMilli = unix_time_millis(dayChoiceObject)
 
-with open ('test_data/Citi.CSV', 'r') as citi_csv:
+with open (root_path + citi_path, 'r', encoding="utf8") as citi_csv:
     citi_reader = csv.DictReader(citi_csv)
-    
-    # with open ('new_citi.csv', 'w') as new_file:
-    #     csv_writer = csv.writer(new_file)
-    
+
     for line in citi_reader:
-        
+
         s = datetime.strptime(line['Date'], "%m/%d/%Y")
         milli = unix_time_millis(s)
         line['Date'] = int(milli)
@@ -35,7 +47,7 @@ with open ('test_data/Citi.CSV', 'r') as citi_csv:
                 if not (v or k == 'Credit'):
                     del line[k]
                 elif isinstance(v, dict):
-                    delete_empty_value(v)        
+                    delete_empty_value(v)
         #print(line)
         line['Debit'] = line['Debit'].replace(",", "")
         line['Debit'] = "-" + line['Debit']
@@ -48,8 +60,8 @@ with open ('test_data/Citi.CSV', 'r') as citi_csv:
         del line['Debit']
         myDict['Transactions'].append(line)
         #csv_writer.writerow(s)
-            
-with open ('test_data/USAA_download.csv', 'r') as usaa_csv:
+
+with open (root_path + usaa_path, 'r', encoding="utf8") as usaa_csv:
     usaa_reader = csv.DictReader(usaa_csv)
     usaa_reader.fieldnames = ['Status', 'Blank', 'Date', 'Blank2','Description', 'Category', 'Amount']
     for line in usaa_reader:
@@ -61,60 +73,136 @@ with open ('test_data/USAA_download.csv', 'r') as usaa_csv:
         if "--" in line["Amount"][:2]:
             line['Amount'] = line['Amount'][2:]
 
-        #print(line)
         myDict['Transactions'].append(line)
-        #csv_writer.writerow(s)
-        
-myDict['Transactions'] = sorted(myDict['Transactions'], key=lambda k: k['Date']) 
 
-for filename in os.listdir('test_data/Fit Data'):
+
+myDict['Transactions'] = sorted(myDict['Transactions'], key=lambda k: k['Date'])
+
+for filename in os.listdir(root_path + fit_path):
     if filename.endswith(".csv"):
-        with open ('test_data/Fit Data/' + filename, 'r') as fit_csv:
+        with open (root_path + fit_path + filename, 'r', encoding="utf8") as fit_csv:
             fit_reader = csv.DictReader(fit_csv)
-    
-            for line in fit_reader:
-                new_date = dayChoice + " " + line['Start time'][0:8]
-                t = datetime.strptime(new_date, "%Y-%m-%d %X")
-                milli = unix_time_millis(t)
-                line['Start time'] = int(milli)        
-                
-                t = datetime.strptime(dayChoice + " " + line['End time'][0:8], "%Y-%m-%d %X")
-                milli = unix_time_millis(t)
-                line['End time'] = int(milli)
-                myDict['Activity'].append(line)
+            try:
+                for line in fit_reader:
+                    if len([x.strip() for x in filename.split('-')]) == 3:
+                        new_date = dayChoice + " " + line['Start time'][0:8]
+                        t = datetime.strptime(new_date, "%Y-%m-%d %X")
+                        milli = unix_time_millis(t)
+                        line['Start time'] = int(milli)
+
+                        t = datetime.strptime(dayChoice + " " + line['End time'][0:8], "%Y-%m-%d %X")
+                        milli = unix_time_millis(t)
+                        line['End time'] = int(milli)
+
+                        myDict['Activity'].append(line)
+                        continue
+                    else:
+                        continue
+            except ValueError:
                 continue
-            else:
-                continue
-        
-        
-with open ('test_data/rescuetime-activity-history.csv', 'r') as rescue_csv:
+
+
+with open (root_path + rescue_path, 'r', encoding="utf8") as rescue_csv:
     rescue_reader = csv.DictReader(rescue_csv)
     rescue_reader.fieldnames = ['Date','Title', 'Details','Category','Type','Duration']
 
     for line in rescue_reader:
         t = datetime.strptime(line['Date'][0:19], "%Y-%m-%d %X")
         milli = unix_time_millis(t)
-        line['Date'] = milli
+        line['Date'] = int(milli)
+
         myDict['Screen Activity'].append(line)
-    
-filename = 'test_data/MyActivity.html'
-search_data = open(filename, "r").read()
-#soup = BeautifulSoup(search_data, 'html.parser')
-#product = SoupStrainer('div',{'class':"content-cell mdl-cell mdl-cell--6-col mdl-typography--body-1}"})
+
+filename = root_path + search_path
+search_data = open(filename, 'r', encoding="utf8").read()
 product = SoupStrainer('div','content-cell mdl-cell mdl-cell--6-col mdl-typography--body-1')
-soup = BeautifulSoup(search_data,parse_only=product,features="html.parser")
+soup = BeautifulSoup(search_data,parse_only=product,features="lxml")
 for elem in soup:
-    myDict['Search'].append(elem.get_text())
-#     print(tag), 
+    searchDict = {}
+    elemText = elem.get_text()
+    if "Searched" in elemText[:8]:
+        try:
+            searchDict['Terms'] = elem.a.get_text()
+            searchDate = str(elem.a.next_sibling.next_sibling)
+            #searchDate = searchDate[0:-]
+            splitDate = [x.strip() for x in searchDate.split(',')]
+            searchTime = [x.strip() for x in splitDate[2].split(' ')]
+            searchHour = [x.strip() for x in searchTime[0].split(':')]
+            if len(splitDate[0]) == 5:
+                fixDay = splitDate[0][0:-1] + "0" + splitDate[0][-1:]
+            else:
+                fixDay = str(splitDate[0])
+            if searchTime[1] == "PM" and int(searchHour[0]) < 12:
+                searchHour[0] = str(int(searchHour[0]) + 12)
+            elif searchTime[1] == "AM" and searchHour[0] == "12":
+                searchHour[0] = "00"
+            elif len(searchHour[0]) == 1:
+                    searchHour[0] = "0" + searchHour[0]
+            try:
+                t = datetime.strptime(str(fixDay + " " + str(splitDate[1]) + " " + str(searchHour[0]) + " " + str(searchHour[1]) + " " + str(searchHour[2])), "%b %d %Y %H %M %S" )
+                milli = unix_time_millis(t)
+            except ValueError:
+                print (elem)
+                continue
+            searchDict['Date'] = int(milli)
 
-# for link in soup.find_all('div', attrs={'class="content-cell mdl-cell mdl-cell--6-col mdl-typography--body-1}"'}):
-#     myDict['Search']['Terms'] = link
-#     print(myDict['Search']['Terms'])
-
-    #print(link)
-print(myDict['Search'])
+            myDict['Search'].append(searchDict)
 
 
+        except AttributeError:
+            try:
+                hotelFix = [x.strip() for x in str(elem).split('>')]
+                searchDict['Terms'] = hotelFix[1][13:-4]
+                searchDate = hotelFix[2][:-5]
+                splitDate = [x.strip() for x in searchDate.split(',')]
+                searchTime = [x.strip() for x in splitDate[2].split(' ')]
+                searchHour = [x.strip() for x in searchTime[0].split(':')]
+                if len(splitDate[0]) == 5:
+                    fixDay = splitDate[0][0:-1] + "0" + splitDate[0][-1:]
+                else:
+                    fixDay = str(splitDate[0])
+                if searchTime[1] == "PM" and int(searchHour[0]) < 12:
+                    searchHour[0] = str(int(searchHour[0]) + 12)
+                elif searchTime[1] == "AM" and searchHour[0] == "12":
+                    searchHour[0] = "00"
+                elif len(searchHour[0]) == 1:
+                    searchHour[0] = "0" + searchHour[0]
+                try:
+                    t = datetime.strptime(str(fixDay + " " + str(splitDate[1]) + " " + str(searchHour[0]) + " " + str(searchHour[1]) + " " + str(searchHour[2])), "%b %d %Y %H %M %S" )
+                    milli = unix_time_millis(t)
+                except ValueError:
+                    print (elem)
+                    continue
+                searchDict['Date'] = int(milli)
+            finally:
+                myDict['Search'].append(searchDict)
 
-with open('data.txt', 'w') as outfile:  
+for filename in os.listdir(root_path + calendar_path):
+    if filename.endswith(".ics"):
+        with open (root_path + calendar_path + filename, 'r', encoding="utf8") as calendar_file:
+            c = Calendar(calendar_file.read())
+
+            for event in c.events:
+                formatEvent = {}
+                formatEvent['Name'] = event.name
+                b = datetime.strptime(str(event.begin)[:-6], "%Y-%m-%dT%X")
+                milliBegin = unix_time_millis(b)
+                formatEvent['Begin'] = int(milliBegin)
+                e = datetime.strptime(str(event.end)[:-6], "%Y-%m-%dT%X")
+                milliEnd = unix_time_millis(e)
+                formatEvent['End'] = int(milliEnd)
+                myDict['Calendar'].append(formatEvent)
+
+
+# with open(root_path + location_path, 'rb') as location_file:
+#     #location_data = ijson.items(location_file, 'locations')
+#     #location_data = json.load(location_file)
+#     # for entry in location_data:
+#     #     print(entry)
+#
+#     for prefix, event, value in location_file:
+#         if event == 'string':
+#             print(value)
+
+with open('data.txt', 'w') as outfile:
     json.dump(myDict, outfile)
