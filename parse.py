@@ -23,7 +23,7 @@ usaa_path = "Financial/USAA_download.csv"
 fit_path = "Google/Fit/Daily Aggregations/"
 rescue_path = "Screen Activity/rescuetime-activity-history.csv"
 search_path = "Google/My Activity/Search/MyActivity.html"
-voice_path = "Google/Voice/"
+phone_path = "Google/Voice/Calls/"
 calendar_path = "Google/Calendar/"
 geo_path = "Google/Location History/Location History.json"
 dayChoice = "2017-05-10"
@@ -210,6 +210,88 @@ with open(root_path + geo_path, 'rb') as geo_path:
         geo_object['Latitude'] = item['latitudeE7']/1e7
         geo_object['Longtitude'] = item['longitudeE7']/1e7
         myDict['Location'].append(geo_object)
+
+for filename in os.listdir(root_path + phone_path):
+    if filename.endswith(".html"):
+        with open (root_path + phone_path + filename, 'r', encoding="utf8") as phone_file:
+        # with open (root_path + phone_path + "Kyle Walsh - Placed - 2012-09-17T18_23_27Z.html", 'r', encoding="utf8") as phone_file:
+            product = SoupStrainer('a','published')
+            phone_object = {}
+            soup = BeautifulSoup(phone_file,features="lxml")
+            title = soup.find('title')
+            title = title.get_text()
+            date = soup.find('abbr')
+            date = date.get('title')
+            b = datetime.strptime(date[:-10], "%Y-%m-%dT%X")
+            milliDate = unix_time_millis(b)
+            phone_object['Date'] = int(milliDate)
+            if title[:14] == "Placed call to":
+                phone_object['Type'] = "Placed"
+                title = title.split("to")
+                try:
+                    phone_object['Person'] = title[1][1:]
+                    duration = soup.find('abbr', 'duration').get_text()
+                    phone_object['Duration'] = duration[1:-1]
+
+                except:
+                    print ("error: ", filename)
+            if title[:16] == "Missed call from":
+                phone_object['Type'] = "Missed"
+                title = title.split("from")
+                try:
+                    phone_object['Person'] = title[1][1:]
+                except:
+                    print ("error: ", filename)
+
+            if title[:18] == "Received call from":
+                phone_object['Type'] = "Received"
+                title = title.split("from")
+                try:
+                    phone_object['Person'] = title[1][1:]
+                    duration = soup.find('abbr', 'duration').get_text()
+                    phone_object['Duration'] = duration[1:-1]
+                except:
+                    print ("error: ", filename)
+
+            if title[:14] == "Voicemail from":
+                phone_object['Type'] = "Voicemail"
+                title = title.split("from")
+                try:
+                    phone_object['Person'] = title[1][1:]
+                    duration = soup.find('abbr', 'duration').get_text()
+                    phone_object['Duration'] = duration[1:-1]
+                except:
+                    print ("error: ", filename)
+
+            if soup.find('div', 'hChatLog hfeed'):
+                person = soup.find('head')
+                person = person.find('title')
+                person = person.get_text()
+                phone_object['Person'] = person
+                if person[:5] == 'Me to':
+                    phone_object['Person'] = person[6:]
+                phone_object['Messages'] = []
+                messageCorpus = soup.find_all('div', 'message')
+                for item in messageCorpus:
+                    message = {}
+                    sender = item.find('a', 'tel')
+                    if sender.find('span'):
+                        sender = sender.find('span').get_text()
+                    else:
+                        sender = sender.find('abbr').get_text()
+                    message['Sender'] = sender
+                    text = item.find('q')
+                    text = text.get_text()
+                    message['Text'] = text
+                    time = soup.find('abbr')
+                    time = time.get('title')
+                    c = datetime.strptime(time[:-10], "%Y-%m-%dT%X")
+                    milliTime = unix_time_millis(c)
+                    message['Time'] = int(milliTime)
+                    phone_object['Messages'].append(message)
+
+    myDict['Phone'].append(phone_object)
+
 
 with open('data.txt', 'w') as outfile:
     json.dump(myDict, outfile)

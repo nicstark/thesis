@@ -37,7 +37,7 @@ dayChoiceObject = datetime.strptime(dayChoice, "%Y-%m-%d")
 dayChoiceMilli = unix_time_millis(dayChoiceObject)
 filename = root_path + search_path
 
-testDict = {}
+
 for filename in os.listdir(root_path + phone_path):
     if filename.endswith(".html"):
         with open (root_path + phone_path + filename, 'r', encoding="utf8") as phone_file:
@@ -57,12 +57,70 @@ for filename in os.listdir(root_path + phone_path):
                 title = title.split("to")
                 try:
                     phone_object['Person'] = title[1][1:]
-                    testDict[title[1][1:]] = 1
+                    duration = soup.find('abbr', 'duration').get_text()
+                    phone_object['Duration'] = duration[1:-1]
+
                 except:
                     print ("error: ", filename)
+            if title[:16] == "Missed call from":
+                phone_object['Type'] = "Missed"
+                title = title.split("from")
+                try:
+                    phone_object['Person'] = title[1][1:]
+                except:
+                    print ("error: ", filename)
+
+            if title[:18] == "Received call from":
+                phone_object['Type'] = "Received"
+                title = title.split("from")
+                try:
+                    phone_object['Person'] = title[1][1:]
+                    duration = soup.find('abbr', 'duration').get_text()
+                    phone_object['Duration'] = duration[1:-1]
+                except:
+                    print ("error: ", filename)
+
+            if title[:14] == "Voicemail from":
+                phone_object['Type'] = "Voicemail"
+                title = title.split("from")
+                try:
+                    phone_object['Person'] = title[1][1:]
+                    duration = soup.find('abbr', 'duration').get_text()
+                    phone_object['Duration'] = duration[1:-1]
+                except:
+                    print ("error: ", filename)
+
+            if soup.find('div', 'hChatLog hfeed'):
+                person = soup.find('head')
+                person = person.find('title')
+                person = person.get_text()
+                phone_object['Person'] = person
+                if person[:5] == 'Me to':
+                    phone_object['Person'] = person[6:]
+                phone_object['Messages'] = []
+                messageCorpus = soup.find_all('div', 'message')
+                for item in messageCorpus:
+                    message = {}
+                    sender = item.find('a', 'tel')
+                    if sender.find('span'):
+                        sender = sender.find('span').get_text()
+                    else:
+                        sender = sender.find('abbr').get_text()
+                    message['Sender'] = sender
+                    text = item.find('q')
+                    text = text.get_text()
+                    message['Text'] = text
+                    time = soup.find('abbr')
+                    time = time.get('title')
+                    c = datetime.strptime(time[:-10], "%Y-%m-%dT%X")
+                    milliTime = unix_time_millis(c)
+                    message['Time'] = int(milliTime)
+                    phone_object['Messages'].append(message)
+
     myDict['Phone'].append(phone_object)
-print(testDict)
-            #if title[:16] == "Missed call from":
+print(myDict['Phone'])
+# print(myDict['Phone'])
+            #if
                 #print(title)
             #
             # for elem in soup:
