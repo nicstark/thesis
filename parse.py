@@ -15,6 +15,7 @@ myDict['Screen Activity'] = []
 myDict['Search'] = []
 myDict['Calendar'] = []
 myDict['Location'] = []
+myDict['Phone'] = []
 epoch = datetime.utcfromtimestamp(0)
 root_path = "C:/Users/eufou/Desktop/Data/"
 citi_path = "Financial/Citi.CSV"
@@ -24,7 +25,7 @@ rescue_path = "Screen Activity/rescuetime-activity-history.csv"
 search_path = "Google/My Activity/Search/MyActivity.html"
 voice_path = "Google/Voice/"
 calendar_path = "Google/Calendar/"
-location_path = "Google/Location History/Location History.json"
+geo_path = "Google/Location History/Location History.json"
 dayChoice = "2017-05-10"
 fixDay = 0
 
@@ -77,30 +78,36 @@ with open (root_path + usaa_path, 'r', encoding="utf8") as usaa_csv:
 
 
 myDict['Transactions'] = sorted(myDict['Transactions'], key=lambda k: k['Date'])
-
+counter = 0
 for filename in os.listdir(root_path + fit_path):
     if filename.endswith(".csv"):
         with open (root_path + fit_path + filename, 'r', encoding="utf8") as fit_csv:
             fit_reader = csv.DictReader(fit_csv)
-            try:
-                for line in fit_reader:
+            for line in fit_reader:
+                fit_object = {}
+                fit_object['Step Count'] = line['Step count']
+                try:
+                    fit_object['Sleep'] = int(line['Sleep duration (ms)'])
+                except:
+                    fit_object['Sleep'] = 0
+                try:
+                    fit_object['Deep Sleep'] = int(line['Deep sleeping duration (ms)'])
+                except:
+                    fit_object['Deep Sleep'] = 0
+                try:
                     if len([x.strip() for x in filename.split('-')]) == 3:
                         new_date = dayChoice + " " + line['Start time'][0:8]
                         t = datetime.strptime(new_date, "%Y-%m-%d %X")
                         milli = unix_time_millis(t)
-                        line['Start time'] = int(milli)
-
+                        fit_object['Start Time'] = int(milli)
                         t = datetime.strptime(dayChoice + " " + line['End time'][0:8], "%Y-%m-%d %X")
                         milli = unix_time_millis(t)
-                        line['End time'] = int(milli)
-
-                        myDict['Activity'].append(line)
-                        continue
+                        fit_object['End Time'] = int(milli)
                     else:
                         continue
-            except ValueError:
-                continue
-
+                except:
+                    continue
+                myDict['Activity'].append(fit_object)
 
 with open (root_path + rescue_path, 'r', encoding="utf8") as rescue_csv:
     rescue_reader = csv.DictReader(rescue_csv)
@@ -194,15 +201,15 @@ for filename in os.listdir(root_path + calendar_path):
                 myDict['Calendar'].append(formatEvent)
 
 
-# with open(root_path + location_path, 'rb') as location_file:
-#     #location_data = ijson.items(location_file, 'locations')
-#     #location_data = json.load(location_file)
-#     # for entry in location_data:
-#     #     print(entry)
-#
-#     for prefix, event, value in location_file:
-#         if event == 'string':
-#             print(value)
+with open(root_path + geo_path, 'rb') as geo_path:
+    #geo_data = ijson.items(geo_path, 'locations')
+    geo_data = json.load(geo_path)
+    for item in geo_data['locations']:
+        geo_object = {}
+        geo_object['Date'] = item['timestampMs']
+        geo_object['Latitude'] = item['latitudeE7']/1e7
+        geo_object['Longtitude'] = item['longitudeE7']/1e7
+        myDict['Location'].append(geo_object)
 
 with open('data.txt', 'w') as outfile:
     json.dump(myDict, outfile)
