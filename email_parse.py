@@ -46,34 +46,38 @@ def unix_time_millis(dt):
 dayChoiceObject = datetime.strptime(dayChoice, "%Y-%m-%d")
 dayChoiceMilli = unix_time_millis(dayChoiceObject)
 
+def showPayload(msg):
+    payload = msg.get_payload()
 
+    if msg.is_multipart():
+        div = ''
+        for subMsg in payload:
+            print (div)
+            showPayload(subMsg)
+            div = '------------------------------'
+    else:
+        print (msg.get_content_type())
+        print (payload[:200])
 
 mbox = mailbox.mbox(root_path + mail_path)
-print(mbox[4])
 for email in mbox:
     if 'Spam' in email['X-Gmail-Labels']:
         continue
         print('spam filtered')
     else:
-        if email.is_multipart():
-            content = ''.join(part.get_payload() for part in email.get_payload()[0])
-        else:
-            content = email.get_payload()
         email_object = {}
         email_object['Subject'] = email['subject']
         email_object['Sender'] = email['from']
         email_object['Recipient'] = email['to']
-        email_object['Body'] = content
+        email_object['Body'] = showPayload(email)
         email_object['Date'] = email['date']
         myDict['Email'].append(email_object)
 
+
+
+
 # print(len(myDict['Email']))
 print(myDict['Email'][25])
-print(myDict['Email'][26])
-print(myDict['Email'][27])
-print(myDict['Email'][28])
-print(myDict['Email'][29])
-print(myDict['Email'][21])
-print(myDict['Email'][22])
+
 # print(myDict['Email'][23])
 # print(myDict['Email'][24])
