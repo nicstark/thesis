@@ -51,33 +51,61 @@ def showPayload(msg):
 
     if msg.is_multipart():
         div = ''
+        message = []
         for subMsg in payload:
-            print (div)
-            showPayload(subMsg)
-            div = '------------------------------'
+            #print (div)
+            message.append(showPayload(subMsg))
+            #div = '------------------------------'
+        return message
     else:
-        print (msg.get_content_type())
-        print (payload[:200])
+        return payload[:200]
+        #print (msg.get_content_type())
+        #print (payload[:200])
+
+filter = ['Spam', 'SMS', 'Chat']
+
+def email_parse(email):
+    email_object = {}
+    email_object['Subject'] = email['subject']
+    email_object['Sender'] = email['from']
+    email_object['Recipient'] = email['to']
+    email_object['Body'] = showPayload(email)
+    dateString = str(email['date'])
+    print(dateString)
+    splitDate = dateString.split()
+    if len(splitDate[0]) == 4:
+        if len(splitDate[4]) < 8:
+            splitTime = splitDate[4].split(':')
+            t = datetime.strptime(splitDate[1] + "," + splitDate[2] + "," + splitDate[3] + "," + splitTime[0] + ':' + splitTime[1], "%d,%b,%Y,%H:%M")
+        else:
+            splitTime = splitDate[4].split(':')
+            t = datetime.strptime(splitDate[1] + "," + splitDate[2] + "," + splitDate[3] + "," + splitTime[0] + ':' + splitTime[1] + ":" + splitTime[2], "%d,%b,%Y,%H:%M:%S")
+    else:
+        if len(splitDate[3]) < 8:
+            splitTime = splitDate[3].split(':')
+            t = datetime.strptime(splitDate[0] + "," + splitDate[1] + "," + splitDate[2] + "," + splitTime[0] + ':' + splitTime[1], "%d,%b,%Y,%H:%M")
+        else:
+            splitTime = splitDate[3].split(':')
+            t = datetime.strptime(splitDate[0] + "," + splitDate[1] + "," + splitDate[2] + "," + splitTime[0] + ':' + splitTime[1] + ":" + splitTime[2], "%d,%b,%Y,%H:%M:%S")
+
+    milli = unix_time_millis(t)
+    email_object['Date'] = int(milli)
+
+    myDict['Email'].append(email_object)
 
 mbox = mailbox.mbox(root_path + mail_path)
 for email in mbox:
-    if 'Spam' in email['X-Gmail-Labels']:
-        continue
-        print('spam filtered')
+    if email['X-Gmail-Labels']:
+        if  any(filters in email['X-Gmail-Labels'] for filters in filter):
+            print('filter working')
+        else:
+            email_parse(email)
     else:
-        email_object = {}
-        email_object['Subject'] = email['subject']
-        email_object['Sender'] = email['from']
-        email_object['Recipient'] = email['to']
-        email_object['Body'] = showPayload(email)
-        email_object['Date'] = email['date']
-        myDict['Email'].append(email_object)
-
+        email_parse(email)
 
 
 
 # print(len(myDict['Email']))
 print(myDict['Email'][25])
-
-# print(myDict['Email'][23])
-# print(myDict['Email'][24])
+print(myDict['Email'][23])
+print(myDict['Email'][24])
