@@ -2,12 +2,14 @@ import os
 import csv
 import json
 import ijson
-from datetime import datetime
+from datetime import *
 import lxml
 from bs4 import BeautifulSoup, SoupStrainer
 from ics import Calendar, Event
 import mailbox
 import email.utils
+from dateutil.parser import *
+
 
 myDict = {}
 myDict['Transactions'] = []
@@ -31,11 +33,11 @@ mail_path = "Google/Mail/All mail Including Spam and Trash.mbox"
 geo_path = "Google/Location History/Location History.json"
 dayChoice = "2017-05-10"
 fixDay = 0
-
-from_addr = email.utils.formataddr(('Author',
-                                    'author@example.com'))
-to_addr = email.utils.formataddr(('Recipient',
-                                  'recipient@example.com'))
+#
+# from_addr = email.utils.formataddr(('Author',
+#                                     'author@example.com'))
+# to_addr = email.utils.formataddr(('Recipient',
+#                                   'recipient@example.com'))
 
 
 
@@ -43,8 +45,6 @@ to_addr = email.utils.formataddr(('Recipient',
 def unix_time_millis(dt):
     return (dt - epoch).total_seconds() * 1000.0
 
-dayChoiceObject = datetime.strptime(dayChoice, "%Y-%m-%d")
-dayChoiceMilli = unix_time_millis(dayChoiceObject)
 
 def showPayload(msg):
     payload = msg.get_payload()
@@ -63,6 +63,7 @@ def showPayload(msg):
         #print (payload[:200])
 
 filter = ['Spam', 'SMS', 'Chat']
+plusminus = ['+', '-']
 
 def email_parse(email):
     email_object = {}
@@ -70,26 +71,38 @@ def email_parse(email):
     email_object['Sender'] = email['from']
     email_object['Recipient'] = email['to']
     email_object['Body'] = showPayload(email)
-    dateString = str(email['date'])
-    print(dateString)
-    splitDate = dateString.split()
-    if len(splitDate[0]) == 4:
-        if len(splitDate[4]) < 8:
-            splitTime = splitDate[4].split(':')
-            t = datetime.strptime(splitDate[1] + "," + splitDate[2] + "," + splitDate[3] + "," + splitTime[0] + ':' + splitTime[1], "%d,%b,%Y,%H:%M")
-        else:
-            splitTime = splitDate[4].split(':')
-            t = datetime.strptime(splitDate[1] + "," + splitDate[2] + "," + splitDate[3] + "," + splitTime[0] + ':' + splitTime[1] + ":" + splitTime[2], "%d,%b,%Y,%H:%M:%S")
-    else:
-        if len(splitDate[3]) < 8:
-            splitTime = splitDate[3].split(':')
-            t = datetime.strptime(splitDate[0] + "," + splitDate[1] + "," + splitDate[2] + "," + splitTime[0] + ':' + splitTime[1], "%d,%b,%Y,%H:%M")
-        else:
-            splitTime = splitDate[3].split(':')
-            t = datetime.strptime(splitDate[0] + "," + splitDate[1] + "," + splitDate[2] + "," + splitTime[0] + ':' + splitTime[1] + ":" + splitTime[2], "%d,%b,%Y,%H:%M:%S")
+    try:
+        try:
+            parentSplit = email['date'].split('(')
+            if any(gmt in parentSplit[0] for gmt in plusminus):
+                try:
+                    gmtSplit = parentSplit[0].split('+')
+                    gmtSplit = gmtSplit[0].split('-')
 
-    milli = unix_time_millis(t)
-    email_object['Date'] = int(milli)
+                except:
+                    gmtSplit = parentSplit[0].split('-')
+                email_object['Date'] = parse(gmtSplit[0])
+            else:
+                email_object['Date'] = parse(parentSplit[0])
+        except:
+            if any(gmt in email['date'] for gmt in plusminus):
+                try:
+                    dateSplit = email['date'].split('+')
+                except:
+                    dateSplit = email['date'].split('-')
+                email_object['Date'] = parse(dateSplit[0])
+            else:
+                email_object['Date'] = parse(email['date'])
+    except:
+        email_object['Date'] = parse(email['date'][:-5])
+        pass
+    try:
+        t = datetime.strptime(str(email_object['Date']), "%Y-%m-%d %H:%M:%S")
+        milli = unix_time_millis(t)
+        email_object['Date'] = int(milli)
+    except:
+        email_object['Date'] = parse(email['date'][:-5])
+        pass
 
     myDict['Email'].append(email_object)
 
@@ -97,15 +110,8 @@ mbox = mailbox.mbox(root_path + mail_path)
 for email in mbox:
     if email['X-Gmail-Labels']:
         if  any(filters in email['X-Gmail-Labels'] for filters in filter):
-            print('filter working')
+            continue
         else:
             email_parse(email)
     else:
         email_parse(email)
-
-
-
-# print(len(myDict['Email']))
-print(myDict['Email'][25])
-print(myDict['Email'][23])
-print(myDict['Email'][24])

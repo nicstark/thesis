@@ -2,11 +2,13 @@ import os
 import csv
 import json
 import ijson
-from datetime import datetime
+from datetime import *
 import lxml
 from bs4 import BeautifulSoup, SoupStrainer
 from ics import Calendar, Event
-
+import mailbox
+import email.utils
+from dateutil.parser import *
 
 myDict = {}
 myDict['Transactions'] = []
@@ -16,6 +18,7 @@ myDict['Search'] = []
 myDict['Calendar'] = []
 myDict['Location'] = []
 myDict['Phone'] = []
+myDict['Email'] = []
 epoch = datetime.utcfromtimestamp(0)
 root_path = "C:/Users/eufou/Desktop/Data/"
 citi_path = "Financial/Citi.CSV"
@@ -26,14 +29,54 @@ search_path = "Google/My Activity/Search/MyActivity.html"
 phone_path = "Google/Voice/Calls/"
 calendar_path = "Google/Calendar/"
 geo_path = "Google/Location History/Location History.json"
+mail_path = "Google/Mail/All mail Including Spam and Trash.mbox"
 dayChoice = "2017-05-10"
 fixDay = 0
+filter = ['Spam', 'SMS', 'Chat']
+plusminus = ['+', '-']
+dateFormats = ["%Y-%m-%d %H:%M:%S", ]
+
 
 def unix_time_millis(dt):
     return (dt - epoch).total_seconds() * 1000.0
 
-dayChoiceObject = datetime.strptime(dayChoice, "%Y-%m-%d")
-dayChoiceMilli = unix_time_millis(dayChoiceObject)
+def showPayload(msg):
+    payload = msg.get_payload()
+
+    if msg.is_multipart():
+        div = ''
+        message = []
+        for subMsg in payload:
+            #print (div)
+            message.append(showPayload(subMsg))
+            #div = '------------------------------'
+        return message
+    else:
+        return payload[:200]
+
+def email_parse(email):
+    email_object = {}
+    email_object['Subject'] = str(email['subject'])
+    email_object['Sender'] = str(email['from'])
+    email_object['Recipient'] = str(email['to'])
+    email_object['Body'] = str(showPayload(email))
+
+    for x in range(12):
+        index = x * -1
+        try:
+            email_object['Date'] = parse(email['date'][:index])
+            t = datetime.strptime(str(email_object['Date']), "%Y-%m-%d %H:%M:%S")
+            milli = unix_time_millis(t)
+            email_object['Date'] = int(milli)
+            break
+        except:
+            pass
+
+
+    myDict['Email'].append(email_object)
+
+
+
 
 with open (root_path + citi_path, 'r', encoding="utf8") as citi_csv:
     citi_reader = csv.DictReader(citi_csv)
@@ -292,6 +335,18 @@ for filename in os.listdir(root_path + phone_path):
 
     myDict['Phone'].append(phone_object)
 
+mbox = mailbox.mbox(root_path + mail_path)
+for email in mbox:
+    if email['X-Gmail-Labels']:
+        if  any(filters in email['X-Gmail-Labels'] for filters in filter):
+            continue
+        else:
+            email_parse(email)
+    else:
+        email_parse(email)
 
-with open('data.txt', 'w') as outfile:
-    json.dump(myDict, outfile)
+
+
+for keys in myDict:
+    with open(keys + '.txt', 'w') as outfile:
+        json.dump(myDict[keys], outfile, indent=4, sort_keys=True, default=str)
