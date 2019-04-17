@@ -121,6 +121,8 @@ with open (root_path + usaa_path, 'r', encoding="utf8") as usaa_csv:
 
 
 myDict['Transactions'] = sorted(myDict['Transactions'], key=lambda k: k['Date'])
+
+
 counter = 0
 for filename in os.listdir(root_path + fit_path):
     if filename.endswith(".csv"):
@@ -345,8 +347,15 @@ for email in mbox:
     else:
         email_parse(email)
 
+with open('search', mode='w') as csv_file:
+    fieldnames = ['Date', 'Terms']
+    writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+
+    writer.writeheader()
+    for row in myDict['Search']:
+        writer.writerow({'Date': row.Date, 'Terms': row.Terms})
 
 
-for keys in myDict:
-    with open(keys + '.txt', 'w') as outfile:
-        json.dump(myDict[keys], outfile, indent=4, sort_keys=True, default=str)
+# for keys in myDict:
+#     with open(keys + '.txt', 'w') as outfile:
+#         json.dump(myDict[keys], outfile, indent=4, sort_keys=True, default=str)
