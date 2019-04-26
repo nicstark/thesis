@@ -179,6 +179,7 @@ print('sleep array length ', len(realSleepArray))
 
 print('sleep array span ', ((((realSleepArray[-1]['end'] - realSleepArray[0]['start'])/1000)/60)/60)/24)
 
+
 #iterating over real sleep blocks
 i = 1
 while i < len(realSleepArray)-1:
@@ -188,16 +189,17 @@ while i < len(realSleepArray)-1:
         emptyPeriodUnix = realSleepArray[i]['start'] - realSleepArray[i-1]['end']
 
         emptyPeriod = humanTime(emptyPeriodUnix)
+
         #see how many 15 minute blocks fit into the period
         quarterHourDivision = emptyPeriodUnix/900000
         #find how many days fit into the period
 
-        daysInPeriod = int(quarterHourDivision / 96)
+        daysInPeriod = int(emptyPeriodUnix / 86400000)
+
         segment = int(quarterHourDivision/(daysInPeriod*2))
 
         #if so create fake sleep blocks
-        for d in range(1, int(daysInPeriod)):
-            #print(d)
+        for d in range(1, daysInPeriod*2):
             fakeEnd = realSleepArray[i-1]['end'] + (segment*900000)*d
             fakeStart = fakeEnd - (900000*32)
             fakeDaysArray.append({'start' : int(fakeStart), 'end' : int(fakeEnd)})
@@ -205,8 +207,10 @@ while i < len(realSleepArray)-1:
     i += 1
 
 
-
-
+#
+# for day in fakeDaysArray:
+#     print('--')
+#     print(humanDate(day['start']))
 
 
 
@@ -285,11 +289,19 @@ with open (root_path + usaa_path, 'r', encoding="utf8") as usaa_csv:
 
         myDict['Transactions'].append(line)
 
+filteredTransactions = []
+for transaction in myDict['Transactions']:
+    if transaction['Date'] > myDict['Activity'][0]['Start Time'] and transaction['Date'] < myDict['Activity'][-1]['End Time']:
+        filteredTransactions.append(transaction)
+myDict['Transactions'] = filteredTransactions
+
 
 myDict['Transactions'] = sorted(myDict['Transactions'], key=lambda k: k['Date'])
 
+
 for entry in myDict['Activity']:
     if entry['Sleep Block'] == 'Real End' or entry['Sleep Block'] == 'Fake End':
+        #print(humanDate(entry['Start Time']))
         wakeList.append(entry)
 
 dir = ('C:/Users/eufou/Desktop/Parsed')
@@ -302,40 +314,43 @@ for key in myDict:
         os.mkdir(subdir)
 
 
+
 for file in files['Activity']:
     filename = str(file[0]['Start Time'])
     with open(os.path.join(dir + '/Activity', filename + '.txt'), mode='w') as outfile:
         json.dump(file, outfile)
-
-
-filteredTransactions = []
-for transaction in myDict['Transactions']:
-    if transaction['Date'] > myDict['Activity'][0]['Start Time'] and transaction['Date'] < myDict['Activity'][-1]['End Time']:
-        filteredTransactions.append(transaction)
-myDict['Transactions'] = filteredTransactions
-
-
-
-p = 0;
-for transaction in myDict['Transactions']:
-    transactionDate = datetime.fromtimestamp(transaction['Date']/1000).strftime('%Y-%m-%d')
     dayHolder = []
-    if any(transactionDate == datetime.fromtimestamp(wake['Start Time']/1000).strftime('%Y-%m-%d') for wake in wakeList):
-        dayHolder.append(transaction)
-        p +=1;
-    else:
-        print('no match ', transactionDate)
+    for transaction in myDict['Transactions']:
+        transactionDate = datetime.fromtimestamp(transaction['Date']/1000).strftime('%Y-%m-%d')
+        if datetime.fromtimestamp(int(filename)/1000).strftime('%Y-%m-%d') == transactionDate:
+            with open(os.path.join(dir + '/Transactions', filename + '.txt'), mode='w') as outfile:
+                json.dump(dayHolder, outfile)
 
+
+
+
+
+
+#
+#
+# for transaction in myDict['Transactions']:
+#     transactionDate = datetime.fromtimestamp(transaction['Date']/1000).strftime('%Y-%m-%d')
+#     dayHolder = []
+#     if any(transactionDate == datetime.fromtimestamp(wake['Start Time']/1000).strftime('%Y-%m-%d') for wake in wakeList):
+#         dayHolder.append(transaction)
+#
+#     else:
+#         pass
+#
+#
 # for wake in wakeList:
-#     print(datetime.fromtimestamp(wake/1000).strftime('%Y-%m-%d') )
-    # filename = str(wake)
-    # with open(os.path.join(dir + '/Transactions', filename + '.txt'), mode='w') as outfile:
-    #     json.dump(dayHolder, outfile)
+#     print(datetime.fromtimestamp(wake['Start Time']/1000).strftime('%Y-%m-%d') )
+#     filename = str(wake['Start Time'])
+#     with open(os.path.join(dir + '/Transactions', filename + '.txt'), mode='w') as outfile:
+#         json.dump(dayHolder, outfile)
 
 print('wake list length ', len(wakeList))
 
 print('wake list span ', wakeList[-1]['Start Time'] - wakeList[0]['Start Time'])
 
 print('transactions length ', len(myDict['Transactions']))
-
-print('transactions caught in wake filter ',p)
