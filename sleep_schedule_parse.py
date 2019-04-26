@@ -449,7 +449,7 @@ for file in files['Activity']:
     jsonOutput('/Search', filename, searchHolder)
     emailHolder = []
     for email in myDict['Email']:
-        if email['Date'] > file[0]['Start Time'] and email['Date'] < file[-1]['End Time']:
+        if int(email['Date']) > int(file[0]['Start Time']) and int(email['Date']) < int(file[-1]['End Time']):
             emailHolder.append(email)
     jsonOutput('/Email', filename, emailHolder)
 
