@@ -86,6 +86,41 @@ def showPayload(msg):
     else:
         return payload[:200]
 
+def email_parse(email):
+    email_object = {}
+    email_object['Subject'] = str(email['subject'])
+    email_object['Sender'] = str(email['from'])
+    email_object['Recipient'] = str(email['to'])
+    email_object['Body'] = len(str(showPayload(email)))
+
+    for x in range(12):
+        index = x * -1
+        try:
+            email_object['Date'] = parse(email['date'][:index])
+            t = datetime.strptime(str(email_object['Date']), "%Y-%m-%d %H:%M:%S")
+            milli = unix_time_millis(t)
+            email_object['Date'] = int(milli)
+            break
+        except:
+            pass
+
+
+    myDict['Email'].append(email_object)
+print('made it up to here')
+mbox = mailbox.mbox(root_path + mail_path)
+print('mailbox loaded')
+try:
+    for email in mbox:
+        print('working')
+        if email['X-Gmail-Labels']:
+            if  any(filters in email['X-Gmail-Labels'] for filters in filter):
+                continue
+            else:
+                email_parse(email)
+        else:
+            email_parse(email)
+except:
+    print('error')
 
 counter = 0
 for filename in os.listdir(root_path + fit_path):
@@ -238,7 +273,7 @@ lastValue = 0
 while j < len(myDict['Activity']):
     if myDict['Activity'][j]['Sleep Block'] == 'Real Start' or myDict['Activity'][j]['Sleep Block'] == 'Fake Start':
         name = str(myDict['Activity'][j]['Start Time'])
-        value = myDict['Activity'][lastValue:j]
+        value = myDict['Activity'][lastValue:j-1]
         ActivityFiles.append(value)
         lastValue = j
 
@@ -265,11 +300,16 @@ with open (root_path + citi_path, 'r', encoding="utf8") as citi_csv:
                     delete_empty_value(v)
         #print(line)
         line['Debit'] = line['Debit'].replace(",", "")
-        line['Debit'] = "-" + line['Debit']
+        try:
+            if abs(float(line['Debit'])) > 0:
+                line['Debit'] = "-" + line['Debit']
+        except:
+            continue
         if line['Credit']:
             line['Debit'] = 0
             line['Credit'] = line['Credit'].replace(",", "")
             line['Debit'] = line['Credit']
+
         line['Amount'] = line['Debit']
         del line['Credit']
         del line['Debit']
@@ -299,6 +339,72 @@ myDict['Transactions'] = filteredTransactions
 myDict['Transactions'] = sorted(myDict['Transactions'], key=lambda k: k['Date'])
 
 
+#SEARCH
+filename = root_path + search_path
+search_data = open(filename, 'r', encoding="utf8").read()
+product = SoupStrainer('div','content-cell mdl-cell mdl-cell--6-col mdl-typography--body-1')
+soup = BeautifulSoup(search_data,parse_only=product,features="lxml")
+for elem in soup:
+    searchDict = {}
+    elemText = elem.get_text()
+    if "Searched" in elemText[:8]:
+        try:
+            searchDict['Terms'] = elem.a.get_text()
+            searchDate = str(elem.a.next_sibling.next_sibling)
+            #searchDate = searchDate[0:-]
+            splitDate = [x.strip() for x in searchDate.split(',')]
+            searchTime = [x.strip() for x in splitDate[2].split(' ')]
+            searchHour = [x.strip() for x in searchTime[0].split(':')]
+            if len(splitDate[0]) == 5:
+                fixDay = splitDate[0][0:-1] + "0" + splitDate[0][-1:]
+            else:
+                fixDay = str(splitDate[0])
+            if searchTime[1] == "PM" and int(searchHour[0]) < 12:
+                searchHour[0] = str(int(searchHour[0]) + 12)
+            elif searchTime[1] == "AM" and searchHour[0] == "12":
+                searchHour[0] = "00"
+            elif len(searchHour[0]) == 1:
+                    searchHour[0] = "0" + searchHour[0]
+            try:
+                t = datetime.strptime(str(fixDay + " " + str(splitDate[1]) + " " + str(searchHour[0]) + " " + str(searchHour[1]) + " " + str(searchHour[2])), "%b %d %Y %H %M %S" )
+                milli = unix_time_millis(t)
+            except ValueError:
+                print (elem)
+                continue
+            searchDict['Date'] = int(milli)
+
+            myDict['Search'].append(searchDict)
+
+
+        except AttributeError:
+            try:
+                hotelFix = [x.strip() for x in str(elem).split('>')]
+                searchDict['Terms'] = hotelFix[1][13:-4]
+                searchDate = hotelFix[2][:-5]
+                splitDate = [x.strip() for x in searchDate.split(',')]
+                searchTime = [x.strip() for x in splitDate[2].split(' ')]
+                searchHour = [x.strip() for x in searchTime[0].split(':')]
+                if len(splitDate[0]) == 5:
+                    fixDay = splitDate[0][0:-1] + "0" + splitDate[0][-1:]
+                else:
+                    fixDay = str(splitDate[0])
+                if searchTime[1] == "PM" and int(searchHour[0]) < 12:
+                    searchHour[0] = str(int(searchHour[0]) + 12)
+                elif searchTime[1] == "AM" and searchHour[0] == "12":
+                    searchHour[0] = "00"
+                elif len(searchHour[0]) == 1:
+                    searchHour[0] = "0" + searchHour[0]
+                try:
+                    t = datetime.strptime(str(fixDay + " " + str(splitDate[1]) + " " + str(searchHour[0]) + " " + str(searchHour[1]) + " " + str(searchHour[2])), "%b %d %Y %H %M %S" )
+                    milli = unix_time_millis(t)
+                except ValueError:
+                    print (elem)
+                    continue
+                searchDict['Date'] = int(milli)
+            finally:
+                myDict['Search'].append(searchDict)
+
+
 for entry in myDict['Activity']:
     if entry['Sleep Block'] == 'Real End' or entry['Sleep Block'] == 'Fake End':
         #print(humanDate(entry['Start Time']))
@@ -313,35 +419,49 @@ for key in myDict:
     if not os.path.exists(subdir):
         os.mkdir(subdir)
 
+def jsonOutput(subdir,filename,data):
+    with open(os.path.join(dir + subdir, filename + '.txt'), mode='w') as outfile:
+        json.dump(data, outfile)
+
+
 
 
 for file in files['Activity']:
     filename = str(file[0]['Start Time'])
-    with open(os.path.join(dir + '/Activity', filename + '.txt'), mode='w') as outfile:
-        json.dump(file, outfile)
-    dayHolder = []
+    jsonOutput('/Activity', filename, file)
+
+    transactionHolder = []
     for transaction in myDict['Transactions']:
         transactionDate = datetime.fromtimestamp(transaction['Date']/1000).strftime('%Y-%m-%d')
         if datetime.fromtimestamp(int(filename)/1000).strftime('%Y-%m-%d') == transactionDate:
-            with open(os.path.join(dir + '/Transactions', filename + '.txt'), mode='w') as outfile:
-                json.dump(dayHolder, outfile)
+            transactionHolder.append(transaction)
+    try:
+        transactionHolder = sorted(transactionHolder, reverse = True, key=lambda k: abs(float(k['Amount'])))
+    except:
+        print(transactionHolder)
+        pass
+    jsonOutput('/Transactions', filename, transactionHolder)
+
+    searchHolder = []
+    for search in myDict['Search']:
+        if search['Date'] > file[0]['Start Time'] and search['Date'] < file[-1]['End Time']:
+            searchHolder.append(search)
+    jsonOutput('/Search', filename, searchHolder)
+    emailHolder = []
+    for email in myDict['Email']:
+        if email['Date'] > file[0]['Start Time'] and email['Date'] < file[-1]['End Time']:
+            emailHolder.append(email)
+    jsonOutput('/Email', filename, emailHolder)
 
 
 
 
 
 
-#
-#
-# for transaction in myDict['Transactions']:
-#     transactionDate = datetime.fromtimestamp(transaction['Date']/1000).strftime('%Y-%m-%d')
-#     dayHolder = []
-#     if any(transactionDate == datetime.fromtimestamp(wake['Start Time']/1000).strftime('%Y-%m-%d') for wake in wakeList):
-#         dayHolder.append(transaction)
-#
-#     else:
-#         pass
-#
+
+
+
+
 #
 # for wake in wakeList:
 #     print(datetime.fromtimestamp(wake['Start Time']/1000).strftime('%Y-%m-%d') )
