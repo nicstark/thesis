@@ -18,6 +18,7 @@ myDict['Search'] = []
 myDict['Calendar'] = []
 myDict['Location'] = []
 myDict['Phone'] = []
+myDict['SMS'] = []
 myDict['Email'] = []
 epoch = datetime.utcfromtimestamp(0)
 root_path = "C:/Users/eufou/Desktop/Data/"
@@ -256,6 +257,8 @@ with open(root_path + geo_path, 'rb') as geo_path:
         geo_object['Longtitude'] = item['longitudeE7']/1e7
         myDict['Location'].append(geo_object)
 
+
+
 for filename in os.listdir(root_path + phone_path):
     if filename.endswith(".html"):
         with open (root_path + phone_path + filename, 'r', encoding="utf8") as phone_file:
@@ -309,13 +312,14 @@ for filename in os.listdir(root_path + phone_path):
                     print ("error: ", filename)
 
             if soup.find('div', 'hChatLog hfeed'):
-                person = soup.find('head')
-                person = person.find('title')
-                person = person.get_text()
-                phone_object['Person'] = person
-                if person[:5] == 'Me to':
-                    phone_object['Person'] = person[6:]
-                phone_object['Messages'] = []
+                phone_object['Type'] = "SMS"
+                # person = soup.find('head')
+                # person = person.find('title')
+                # person = person.get_text()
+                # phone_object['Person'] = person
+                # if person[:5] == 'Me to':
+                #     phone_object['Person'] = person[6:]
+                # phone_object['Messages'] = []
                 messageCorpus = soup.find_all('div', 'message')
                 for item in messageCorpus:
                     message = {}
@@ -333,9 +337,11 @@ for filename in os.listdir(root_path + phone_path):
                     c = datetime.strptime(time[:-10], "%Y-%m-%dT%X")
                     milliTime = unix_time_millis(c)
                     message['Time'] = int(milliTime)
-                    phone_object['Messages'].append(message)
-
-    myDict['Phone'].append(phone_object)
+                    myDict['SMS'].append(message)
+    if phone_object['Type'] == 'SMS':
+        continue
+    else:
+        myDict['Phone'].append(phone_object)
 
 mbox = mailbox.mbox(root_path + mail_path)
 for email in mbox:
