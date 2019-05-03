@@ -92,6 +92,109 @@ def screenDateParse(entry):
     milli = unix_time_millis(t)
     return int(milli)
 
+#PHONE_________________________
+def phoneParse():
+    for filename in os.listdir(root_path + phone_path):
+        if filename.endswith(".html"):
+
+            with open (root_path + phone_path + filename, 'r', encoding="utf8") as phone_file:
+                product = SoupStrainer('a','published')
+                phone_object = {}
+                soup = BeautifulSoup(phone_file,features="lxml")
+                title = soup.find('title')
+                title = title.get_text()
+                date = soup.find('abbr')
+                date = date.get('title')
+                b = datetime.strptime(date[:-10], "%Y-%m-%dT%X")
+                milliDate = unix_time_millis(b)
+                phone_object['Date'] = int(milliDate)
+                if title[:14] == "Placed call to":
+                    phone_object['Type'] = "Placed"
+                    title = title.split("to")
+
+                    try:
+                        phone_object['Person'] = title[1][1:]
+                        duration = soup.find('abbr', 'duration').get_text()
+                        b = datetime.strptime("1970,1,1," + duration[1:-1], "%Y,%m,%d,%X")
+                        milliBegin = unix_time_millis(b)
+                        phone_object['Duration'] = int(milliBegin)
+
+                    except:
+                        print ("error: ", filename)
+                elif title[:16] == "Missed call from":
+                    phone_object['Type'] = "Missed"
+                    title = title.split("from")
+                    phone_object['Duration'] = 0;
+                    try:
+                        phone_object['Person'] = title[1][1:]
+                    except:
+                        print ("error: ", filename)
+
+                elif title[:18] == "Received call from":
+                    phone_object['Type'] = "Received"
+                    title = title.split("from")
+                    try:
+                        phone_object['Person'] = title[1][1:]
+                        duration = soup.find('abbr', 'duration').get_text()
+                        b = datetime.strptime("1970,1,1," + duration[1:-1], "%Y,%m,%d,%X")
+                        milliBegin = unix_time_millis(b)
+                        phone_object['Duration'] = int(milliBegin)
+                    except:
+                        print ("error: ", filename)
+
+                elif title[:14] == "Voicemail from":
+                    phone_object['Type'] = "Voicemail"
+                    title = title.split("from")
+                    try:
+                        phone_object['Person'] = title[1][1:]
+                        duration = soup.find('abbr', 'duration').get_text()
+                        b = datetime.strptime("1970,1,1," + duration[1:-1], "%Y,%m,%d,%X")
+                        milliBegin = unix_time_millis(b)
+                        phone_object['Duration'] = int(milliBegin)
+                    except:
+                        print ("error: ", filename)
+
+                if soup.find('div', 'hChatLog hfeed'):
+                    phone_object['Type'] = "SMS"
+                    if title[:5] == 'Me to':
+                        person = title[6:]
+                    else:
+                        person = title
+
+                    messageCorpus = soup.find_all('div', 'message')
+
+
+                    for item in messageCorpus:
+                        message = {}
+                        sender = item.find('a', 'tel')
+                        if sender.find('span'):
+                            sender = sender.find('span').get_text()
+                        else:
+                            sender = sender.find('abbr', "fn").get_text()
+                        message['Person'] = person
+
+                        if sender == "Me":
+                            message['Incoming'] = True;
+
+                        else:
+                            message['Incoming'] = False;
+
+                        text = item.find('q')
+                        text = text.get_text()
+                        message['Length'] = len(text)
+                        time = soup.find('abbr')
+                        time = time.get('title')
+                        c = datetime.strptime(time[:-10], "%Y-%m-%dT%X")
+                        milliTime = unix_time_millis(c)
+                        message['Date'] = int(milliTime)
+                        myDict['SMS'].append(message)
+
+                try:
+                    if phone_object["Type"] != "SMS" and phone_object["Person"] and phone_object["Time"] and phone_object["Length"]:
+                        myDict['Phone'].append(phone_object)
+                except:
+                    continue
+
 
 #SCREEN______________
 def screenParse():
@@ -129,16 +232,20 @@ def screenParse():
 
     df2.Value = aggregates.Value
     df2 =  df2.fillna(0)
-    # df2['Value'] = df2['Value'].astype('int')
-    # df2['Date'] = df2['Date'].astype('int64')
+    df2.sort_index(axis = 1);
+
 
 
     for index, row in df2.iterrows():
         myDict['Screen'].append({'Date': int(row['Date']), 'Value' : int(row['Value'])})
+        # if (int(index) - int(row['Date']) != 0):
+        #     print(int(row['Date']),int(row['Value']))
 
-
-
-
+    # i=1
+    # while i < len(myDict['Screen']):
+    #     if myDict['Screen'][i]['Date'] - myDict['Screen'][i-1]['Date'] > hour:
+    #         print("wtf")
+    #     i+=1
 #CALENDAR________________
 def calParse():
     for filename in os.listdir(root_path + calendar_path):
@@ -491,14 +598,6 @@ def geoParse():
 
 #EXPORT_________________________________________
 
-activityParse()
-#emailParse()
-#geoParse()
-#searchParse()
-#financeParse()
-#calParse()
-screenParse()
-
 dir = ('C:/Users/eufou/Desktop/Parsed')
 if not os.path.exists(dir):
     os.mkdir(dir)
@@ -518,69 +617,104 @@ def jsonOutput(subdir,filename,data):
 
 #EXPORT ACTIVITY____________________
 
-for file in files['Activity']:
-    filename = str(file[0]['Start Time'])
-    jsonOutput('/Activity', filename, file)
+def exporter():
 
-#EXPORT TRANSACTIONS____________________
-    transactionHolder = []
-    for transaction in myDict['Transactions']:
-        transactionDate = datetime.fromtimestamp(transaction['Date']/1000).strftime('%Y-%m-%d')
-        if datetime.fromtimestamp(int(filename)/1000).strftime('%Y-%m-%d') == transactionDate:
-            transactionHolder.append(transaction)
-    try:
-        transactionHolder = sorted(transactionHolder, reverse = True, key=lambda k: abs(float(k['Amount'])))
-    except:
-        pass
-    jsonOutput('/Transactions', filename, transactionHolder)
+    for file in files['Activity']:
+        filename = str(file[0]['Start Time'])
+        jsonOutput('/Activity', filename, file)
 
-#EXPORT SEARCH______________________
-    searchHolder = []
-    for search in myDict['Search']:
-        if search['Date'] > file[0]['Start Time'] and search['Date'] < file[-1]['End Time']:
-            searchHolder.append(search)
-    jsonOutput('/Search', filename, searchHolder)
-
-#EXPORT EMAIL_______________________
-    emailHolder = []
-    for email in myDict['Email']:
+    #EXPORT TRANSACTIONS____________________
+        transactionHolder = []
+        for transaction in myDict['Transactions']:
+            transactionDate = datetime.fromtimestamp(transaction['Date']/1000).strftime('%Y-%m-%d')
+            if datetime.fromtimestamp(int(filename)/1000).strftime('%Y-%m-%d') == transactionDate:
+                transactionHolder.append(transaction)
         try:
-            if int(email['Date']) > int(file[0]['Start Time']) and int(email['Date']) < int(file[-1]['End Time']):
-                emailHolder.append(email)
-        except Exception as e:
-            print("Email ", e)
-            continue
-    jsonOutput('/Email', filename, emailHolder)
+            transactionHolder = sorted(transactionHolder, reverse = True, key=lambda k: abs(float(k['Amount'])))
+        except:
+            pass
+        jsonOutput('/Transactions', filename, transactionHolder)
 
-#EXPORT GEOLOCATION___________________
-    geoHolder = []
-    for geo in myDict['Location']:
-        try:
-            if int(geo['Date']) > int(file[0]['Start Time']) and int(geo['Date']) < int(file[-1]['End Time']):
-                geoHolder.append(geo)
-        except Exception as e:
-            print("Location ", e)
-            continue
-    jsonOutput('/Location', filename, geoHolder)
+    #EXPORT SEARCH______________________
+        searchHolder = []
+        for search in myDict['Search']:
+            if search['Date'] > file[0]['Start Time'] and search['Date'] < file[-1]['End Time']:
+                searchHolder.append(search)
+        jsonOutput('/Search', filename, searchHolder)
 
-#EXPORT CALENDAR________________
-    calHolder = []
-    for event in myDict['Calendar']:
-        try:
-            if int(event['Begin']) > int(file[0]['Start Time']) and int(event['Begin']) < int(file[-1]['End Time']):
-                calHolder.append(event)
-        except Exception as e:
-            print("Calendar ", e)
-            continue
-    jsonOutput('/Calendar', filename, calHolder)
+    #EXPORT EMAIL_______________________
+        emailHolder = []
+        for email in myDict['Email']:
+            try:
+                if int(email['Date']) > int(file[0]['Start Time']) and int(email['Date']) < int(file[-1]['End Time']):
+                    emailHolder.append(email)
+            except Exception as e:
+                print("Email ", e)
+                continue
+        jsonOutput('/Email', filename, emailHolder)
 
-#EXPORT SCREEN______________
-    screenHolder = []
-    for entry in myDict['Screen']:
-        try:
-            if int(entry['Date']) > int(file[0]['Start Time']) and int(entry['Date']) < int(file[-1]['End Time']):
-                screenHolder.append(entry)
-        except Exception as e:
-            print("Screen ", e)
-            continue
-    jsonOutput('/Screen', filename, screenHolder)
+    #EXPORT GEOLOCATION___________________
+        geoHolder = []
+        for geo in myDict['Location']:
+            try:
+                if int(geo['Date']) > int(file[0]['Start Time']) and int(geo['Date']) < int(file[-1]['End Time']):
+                    geoHolder.append(geo)
+            except Exception as e:
+                print("Location ", e)
+                continue
+        jsonOutput('/Location', filename, geoHolder)
+
+    #EXPORT CALENDAR________________
+        calHolder = []
+        for event in myDict['Calendar']:
+            try:
+                if int(event['Begin']) > int(file[0]['Start Time']) and int(event['Begin']) < int(file[-1]['End Time']):
+                    calHolder.append(event)
+            except Exception as e:
+                print("Calendar ", e)
+                continue
+        jsonOutput('/Calendar', filename, calHolder)
+
+    #EXPORT SCREEN______________
+        screenHolder = []
+        for entry in myDict['Screen']:
+            try:
+                if int(entry['Date']) > int(file[0]['Start Time']) and int(entry['Date']) < int(file[-1]['End Time']):
+                    screenHolder.append(entry)
+            except Exception as e:
+                print("Screen ", e)
+                continue
+        jsonOutput('/Screen', filename, screenHolder)
+
+    #EXPORT PHONE__________
+        phoneHolder = []
+        for entry in myDict['Phone']:
+            try:
+                if int(entry['Date']) > int(file[0]['Start Time']) and int(entry['Date']) < int(file[-1]['End Time']):
+                    phoneHolder.append(entry)
+            except Exception as e:
+                print("Phone ", e)
+                continue
+        jsonOutput('/Phone', filename, phoneHolder)
+
+    #EXPORT SMS_________________
+        smsHolder = []
+        for entry in myDict['SMS']:
+            try:
+                if int(entry['Date']) > int(file[0]['Start Time']) and int(entry['Date']) < int(file[-1]['End Time']):
+                    smsHolder.append(entry)
+            except Exception as e:
+                print("SMS", e)
+                continue
+        jsonOutput('/SMS', filename, smsHolder)
+
+
+activityParse()
+#emailParse()
+#geoParse()
+#searchParse()
+#financeParse()
+#calParse()
+#screenParse()
+phoneParse()
+exporter()
