@@ -182,7 +182,7 @@ def phoneParse():
                         text = item.find('q')
                         text = text.get_text()
                         message['Length'] = len(text)
-                        time = soup.find('abbr')
+                        time = item.find('abbr')
                         time = time.get('title')
                         c = datetime.strptime(time[:-10], "%Y-%m-%dT%X")
                         milliTime = unix_time_millis(c)
