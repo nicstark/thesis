@@ -16,6 +16,7 @@ import numpy as np
 
 
 
+
 myDict = {}
 files = {}
 ActivityFiles = []
@@ -33,6 +34,7 @@ fitFilesRef = []
 wakeList = []
 realSleepArray = []
 sleep_object = {}
+protoGeoArray = []
 epoch = datetime.utcfromtimestamp(0)
 root_path = "C:/Users/eufou/Desktop/Data/"
 citi_path = "Financial/Citi.CSV"
@@ -45,7 +47,7 @@ calendar_path = "Google/Calendar/"
 geo_path = "Google/Location History/Location History.json"
 mail_path = "Google/Mail/All mail Including Spam and Trash.mbox"
 fixDay = 0
-startSleep = 0
+sleepStarted = 0
 endSleep = 0
 i = 0
 filter = ['Spam', 'SMS', 'Chat']
@@ -337,7 +339,8 @@ def activityParse():
                     milli = unix_time_millis(e)
                     fit_object['End Time'] = int(milli)
                     fit_object['Sleep Block'] = 'Real Entry'
-
+                    if fit_object['End Time'] < fit_object['Start Time']:
+                        fit_object['End Time'] = fit_object['Start Time'] + 900000
 
                     myDict['Activity'].append(fit_object)
 
@@ -347,8 +350,8 @@ def activityParse():
     myDictSpan  = myDict['Activity'][-1]['Start Time'] - myDict['Activity'][0]['Start Time']
     # print('my dict activity length', len(myDict['Activity']))
     # print('my dict span quartered', myDictSpan/900000)
-
-
+    #print("Data span", humanDays(myDictSpan))
+    #should be ~ 652 days in total
     gapCount = 0
     entryNum = 0
 
@@ -364,102 +367,186 @@ def activityParse():
             gapCount += humanDays(fileGap) -1
         i += 1
 
-    # print('fake entries generated should be 25823', entryNum)
+    #print('fake entries generated should be 25823', entryNum)
     # print('gap count', gapCount)
 
     sortedActivity = sorted(myDict['Activity'], key=lambda k: k['Start Time'])
     myDict['Activity'] = sortedActivity
 
-    # print('my dict activity length after fakes', len(myDict['Activity']))
+
+
 
     #here we catalogue real sleep
     i = 0
     sleepBreakTicker = 0
-    startSleep = 0
+    sleepStarted = 0
     while i < len(myDict['Activity']) -1:
         #look for start of sleep block
-        if myDict['Activity'][i]['Sleep'] > 0 and startSleep == 0 or myDict['Activity'][i]['Deep Sleep'] > 0 and startSleep == 0:
-            startSleep = myDict['Activity'][i]['Start Time']
-            myDict['Activity'][i]['Sleep Block'] = 'Real Start'
-        elif myDict['Activity'][i]['Sleep'] == 0 and myDict['Activity'][i]['Deep Sleep'] == 0 and startSleep != 0:
+        current = myDict['Activity'][i]
+        if current['Sleep'] > 0 or current['Deep Sleep'] > 0:
+            if sleepStarted == 0:
+                sleepStarted = current['Start Time']
+                current['Sleep Block'] = 'Real Start'
+            sleepBreakTicker = 0
+        elif current['Sleep'] == 0 and current['Deep Sleep'] == 0 and sleepStarted != 0:
             sleepBreakTicker += 1
-            if myDict['Activity'][i]['Start Time'] - startSleep < 3600000*2:
-                 pass
-            elif sleepBreakTicker == 10:
+            # if current['Start Time'] - sleepStarted < 3600000*2:
+            #      pass
+            if sleepBreakTicker == 10:
                 myDict['Activity'][i-10]['Sleep Block'] = 'Real End'
                 endSleep = myDict['Activity'][i-10]['Start Time']
-                realSleepArray.append({'start': startSleep, 'end' : endSleep})
-                startSleep = 0
+                realSleepArray.append({'start': sleepStarted, 'end' : endSleep})
+                sleepStarted = 0
                 sleepBreak = 0
                 sleepBreakTicker = 0
         i += 1
 
 
 
-    # print('sleep array length ', len(realSleepArray))
-    #
-    # print('sleep array span ', ((((realSleepArray[-1]['end'] - realSleepArray[0]['start'])/1000)/60)/60)/24)
+    #print('sleep array length ', len(realSleepArray))
 
+    #here we're removing likely false entries
+    i=1
+    while i < len(realSleepArray)-1:
+        sleepTime = humanTime(realSleepArray[i]['end'] - realSleepArray[i]['start'])
+        currentHumanStart = humanDate(realSleepArray[i]['start'])
+        currentHumanEnd = humanDate(realSleepArray[i]['end'])
+        distanceFromPrevious = humanTime(realSleepArray[i]['start'] - realSleepArray[i-1]['end'])
+        distanceFromNext = humanTime(realSleepArray[i+1]['start'] - realSleepArray[i]['end'])
+        previous = humanTime(realSleepArray[i-1]['end'] - realSleepArray[i-1]['start'])
+        next = humanTime(realSleepArray[i+1]['end'] - realSleepArray[i+1]['start'])
 
+        if distanceFromPrevious + sleepTime + previous < 10:
+            realSleepArray[i-1]['end'] = realSleepArray[i]['end']
+            del realSleepArray[i]
+
+        if distanceFromNext + sleepTime + next < 10:
+            realSleepArray[i+1]['start'] = realSleepArray[i]['start']
+            del realSleepArray[i]
+
+        i+=1
+    # print('total time span of data set :', humanDays(realSleepArray[-1]['end'] - realSleepArray[0]['start']))
+    # #
+    # print("Real sleep blocks", len(realSleepArray))
+
+    #242 sleep blocks out of 652 days in total
     #iterating over real sleep blocks
     i = 1
+    numblockcounter = 0
+    daysCounter = 0
+    gapCounter = 0
+    emptyperiodCounter = 0;
     while i < len(realSleepArray)-1:
         #check if there's more than 26 hours between sleep blocks
-        if realSleepArray[i]['start'] - realSleepArray[i-1]['end'] > 93600000:
+        numBlocks = 0
+        if realSleepArray[i]['start'] - realSleepArray[i-1]['end'] > 900000*170:
+            gapCounter+=1
             #get the amount of time between sleep blocks
             emptyPeriodUnix = realSleepArray[i]['start'] - realSleepArray[i-1]['end']
-
+            emptyperiodCounter += emptyPeriodUnix
             emptyPeriod = humanTime(emptyPeriodUnix)
 
             #see how many 15 minute blocks fit into the period
             quarterHourDivision = emptyPeriodUnix/900000
+
             #find how many days fit into the period
+            halfdaysInPeriod = int(emptyPeriodUnix / (86400000/2))
+            numBlocks = int(halfdaysInPeriod)
+            # daysCounter +=daysInPeriod
+            # numblockcounter += numBlocks
+            segmentLengthInBlocks = int((quarterHourDivision/numBlocks)*2)
 
-            daysInPeriod = int(emptyPeriodUnix / 86400000)
-
-            segment = int(quarterHourDivision/(daysInPeriod*2))
-
+            # print("empty period in hours", emptyPeriod)
+            # print("number of quarter hour blocks in period", quarterHourDivision)
+            # print("number of days in period", daysInPeriod)
+            # print("numblocks ", numBlocks)
+            # print("calculated segment", segmentLengthInBlocks)
+            # print(" ")
             #if so create fake sleep blocks
-            for d in range(1, daysInPeriod*2):
-                fakeEnd = realSleepArray[i-1]['end'] + (segment*900000)*d
-                fakeStart = fakeEnd - (900000*32)
-                fakeDaysArray.append({'start' : int(fakeStart), 'end' : int(fakeEnd)})
+        for d in range(1, int(numBlocks/2)+1):
+            fakeEnd = realSleepArray[i-1]['end'] + (segmentLengthInBlocks*900000)*d
+            fakeStart = fakeEnd - (900000*32)
+            fakeDaysArray.append({'start' : int(fakeStart), 'end' : int(fakeEnd)})
 
         i += 1
 
 
+    # i = 1
+    # while i < len(realSleepArray)-1:
+    #     #check if there's more than 26 hours between sleep blocks
+    #     span = realSleepArray[i]['start'] - realSleepArray[i-1]['end']
+    #     if span > 900000*88 and span < 900000*170:
+    #         print(humanTime(span))
+    #     i+=1
+    # for blocks in fakeDaysArray:
+    #     print(humanTime(blocks['end']-blocks['start']))
+    # print('real sleep aray length', len(realSleepArray))
+    # print("gap counter ", gapCounter)
+    # print("numblocks counter ", numblockcounter)
+    # print("days counter ", daysCounter)
+    # print("Fake sleep Blocks", len(fakeDaysArray))
+    # print("empty periods sum days", humanDays(emptyperiodCounter))
+
     count = 0
     for entry in myDict['Activity']:
         for fakeday in fakeDaysArray:
-            if fakeday['start'] == entry['Start Time']:
+            if  abs(entry['Start Time'] == fakeday['start']):
                 count += 1
                 entry['Sleep Block'] = 'Fake Start'
             #else append
-            if fakeday['end'] == entry['End Time']:
+            if abs(fakeday['end'] == entry['End Time']):
                 entry['Sleep Block'] = 'Fake End'
 
 
-    # print('fake sleep blocks added, should be ~ 349',count)
+    print('fake sleep blocks added, should be ~ 410',count)
+
+    # starter = 0;
+    # ender = 0;
+    # starterCount = 0;
+    # for entry in myDict['Activity']:
+    #     if entry['Sleep Block'] == 'Real Start' or entry['Sleep Block'] == 'Fake Start':
+    #         starter = entry['Start Time']
+    #         starterCount +=1
+    #     if entry['Sleep Block'] == 'Real End' or entry['Sleep Block'] == 'Fake End':
+    #         ender = entry['Start Time']
+    #         starterCount = 0
+    #     if starterCount > 1:
+    #         print('fuck')
 
     j = 0
     lastValue = 0
     while j < len(myDict['Activity']):
         if myDict['Activity'][j]['Sleep Block'] == 'Real Start' or myDict['Activity'][j]['Sleep Block'] == 'Fake Start':
-            name = str(myDict['Activity'][j]['Start Time'])
+            #name = str(myDict['Activity'][j]['Start Time'])
             value = myDict['Activity'][lastValue:j-1]
-            ActivityFiles.append(value)
+            if len(value) > 0:
+                ActivityFiles.append(value)
             lastValue = j
 
         j += 1
 
 
-    # print('activity files length ',len(ActivityFiles))
+
+    # print(len(files))
+    print('activity files length ',len(ActivityFiles))
     files['Activity'] = ActivityFiles
-    # print('activity file span ', humanDays(ActivityFiles[-1][0]['End Time'] - ActivityFiles[1][0]['Start Time']))
-    for entry in myDict['Activity']:
-        if entry['Sleep Block'] == 'Real End' or entry['Sleep Block'] == 'Fake End':
-            #print(humanDate(entry['Start Time']))
-            wakeList.append(entry)
+    print('files - activity length', len(files['Activity']))
+
+    # for file in files['Activity']:
+    #     try:
+    #         print(file[0])
+    #     except:
+    #         print(file)
+
+    # print(len(files['Activity']))
+    # print(files['Activity'][0])
+
+    #print('activity file span ', humanDays(ActivityFiles[-1][0]['End Time'] - ActivityFiles[1][0]['Start Time']))
+    # for entry in ActivityFiles:
+    #     files.append(entry)
+
+    # print(len(files))
+
 
 #FINANCIAL____________________________________________
 def financeParse():
@@ -582,19 +669,23 @@ def searchParse():
                     searchDict['Date'] = int(milli)
                 finally:
                     myDict['Search'].append(searchDict)
+    print("len my dict search", len(myDict['Search']))
 
 #GEOLOCATION_____________________________________
 def geoParse():
-    with open(root_path + geo_path, 'rb') as geo_path:
+    with open(root_path + geo_path, 'rb') as geo_csv:
         #geo_data = ijson.items(geo_path, 'locations')
-        geo_data = json.load(geo_path)
+        geo_data = json.load(geo_csv)
         for item in geo_data['locations']:
             geo_object = {}
             geo_object['Date'] = item['timestampMs']
             geo_object['Latitude'] = item['latitudeE7']/1e7
             geo_object['Longitude'] = item['longitudeE7']/1e7
-            myDict['Location'].append(geo_object)
-
+            protoGeoArray.append(geo_object)
+        i = 0
+        while i < len(protoGeoArray)-1:
+            myDict['Location'].append(protoGeoArray[i])
+            i +=3
 
 #EXPORT_________________________________________
 
@@ -620,9 +711,12 @@ def jsonOutput(subdir,filename,data):
 def exporter():
 
     for file in files['Activity']:
-        filename = str(file[0]['Start Time'])
-        jsonOutput('/Activity', filename, file)
-
+        try:
+            filename = str(file[0]['Start Time'])
+            jsonOutput('/Activity', filename, file)
+        except:
+            print("_______________________________________",file)
+            print(len(file[0]))
     #EXPORT TRANSACTIONS____________________
         transactionHolder = []
         for transaction in myDict['Transactions']:
@@ -637,6 +731,7 @@ def exporter():
 
     #EXPORT SEARCH______________________
         searchHolder = []
+
         for search in myDict['Search']:
             if search['Date'] > file[0]['Start Time'] and search['Date'] < file[-1]['End Time']:
                 searchHolder.append(search)
@@ -710,11 +805,11 @@ def exporter():
 
 
 activityParse()
-#emailParse()
-#geoParse()
-#searchParse()
-#financeParse()
-#calParse()
-#screenParse()
+emailParse()
+geoParse()
+searchParse()
+financeParse()
+calParse()
+screenParse()
 phoneParse()
 exporter()

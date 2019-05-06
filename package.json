@@ -18,6 +18,7 @@
   "homepage": "https://github.com/nicstark/thesis#readme",
   "dependencies": {
     "d3": "^5.9.2",
+    "fullpage.js": "^3.0.5",
     "node-fetch": "^2.3.0",
     "node-fetch-polyfill": "^2.0.6",
     "planck-js": "^0.3.5"
