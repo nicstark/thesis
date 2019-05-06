@@ -11,15 +11,25 @@
 
 	<link rel="stylesheet" type="text/css" href="dist/fullpage.css" />
 	<link rel="stylesheet" type="text/css" href="examples.css" />
+	<link rel="shortcut icon" href="TemplateData/favicon.ico">
+	<link rel="stylesheet" href="TemplateData/style.css">
+	<script src="TemplateData/UnityProgress.javascript"></script>
+	<script src="Build/UnityLoader.js"></script>
+	<script>
+			var gameInstance = UnityLoader.instantiate("gameContainer", "Build/Test Build.json", {onProgress: UnityProgress});
+	</script>
 </head>
 <body>
 
 
 <div id="fullpage">
 	<div class="section active" id="section0"><div id="opener"><h1>Nobody Cares About Their Personal Data.</h1></div></div>
-	<div class="section" id="section1">	<div class="circle"><h2>Where Is Yours?</h2></div></div>
-	<div class="section" id="section2"><h2>What Does It Look Like?</h2></div>
-	<div class="section" id="section3"><h1>Just the simplest demo ever</h1></div>
+	<div class="section" id="section1">	<div class="circle"><h2>Where is yours?</h2></div></div>
+	<div class="section" id="section2"><h2>What does it look like?</h2></div>
+	<div class="section" id="section3"><div class="rect"><h2>What story does it tell?</h2></div></div>
+	<div class="section" id="section4"><h2>Cambrian Analytica</h2></div>
+	<div class="section" id="section5"><div class="webgl-content"><div id="gameContainer" style="width:1280; height:720px;"></div></div></div>
+	<div class="section" id="section6"></div>
 </div>
 
 
@@ -28,7 +38,7 @@
 <script type="text/javascript">
 	var myFullpage = new fullpage('#fullpage', {
 		anchors: ['firstPage', 'secondPage', '3rdPage'],
-		sectionsColor: ['#F0E1C2', '#F0E1C2', '#F0E1C2', '#F0E1C2', '#F0E1C2'],
+		sectionsColor: ['#F0E1C2','#F0E1C2','#F0E1C2','#F0E1C2','#F0E1C2','#F0E1C2','#F0E1C2','#F0E1C2','#F0E1C2','#F0E1C2','#F0E1C2','#F0E1C2'],
 		navigation: true,
 		navigationPosition: 'right',
 		// navigationTooltips: ['First page', 'Second page', 'Third and last page']
