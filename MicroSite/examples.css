@@ -12,8 +12,13 @@ form,fieldset,input,textarea,p,blockquote,th,td {
   src: url(fonts/mrseavessmallcaps.ttf);
 }
 @font-face {
-  font-family: mrseavessmallcaps;
+  font-family: mrseavessmallcapsroman;
   src: url(fonts/mrseavesroman.ttf);
+}
+
+@font-face {
+  font-family: mrseavespetite;
+  src: url(fonts/mrseavespetite.otf);
 }
 @font-face {
   font-family: snell;
@@ -63,9 +68,8 @@ abbr,acronym { border: 0;
 /* Custom CSS
  * --------------------------------------- */
 body{
-	font-family: arial,helvetica;
-	color: #333;
-	color: rgba(0,0,0,0.5);
+	font-family: mrseavesroman;
+	color: #241100;
 }
 .wrap{
 	margin-left: auto;
@@ -82,8 +86,16 @@ h2{
   font-weight: normal;
   font-size: 48px;
 }
+h3{
+  font-family: mrseavespetite;
+  font-size: 25px;
+  text-align: center;
+
+}
 p{
-	font-size: 2em;
+  font-family: mrseavesroman;
+	color: #241100;
+  font-size: 17px;
 }
 .intro p{
 	width: 50%;
@@ -103,7 +115,7 @@ p{
   border-width: 1px;
   border-color: #241100;
   margin: 0 auto;
-  line-height: 375px;
+  margin-bottom: 5%
 }
 .rect{
   height: 170px;
@@ -114,29 +126,91 @@ p{
   border-color: #241100;
   vertical-align: middle;
   margin: 0 auto;
-  line-height: 170px;
+  margin-bottom: 5%
 }
 .image1{
   background-image: url(imgs/map.jpg);
 }
 
 .tite{
-  line-height: 200px;
-
+}
+.abstract{
+  text-align: justify;
+  width: 375px;
+  padding-left: 240px;
+}
+.section4inner{
+  display: flex
+}
+.plant{
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+}
+.plantcontainer{
+  width:600px;
+}
+.shape{
+  background-image: url(imgs/shape.svg);
+  background-repeat: no-repeat;
+  background-position: center;
+  height: 250px;
+  width: 600px;
+  margin: 0 auto;
+  margin-bottom: 5%;
+}
+.section1title{
+position: absolute;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -110%);
+}
+.section2title{
+  padding-top: 15%;
+}
+.section3title{
+  padding-top: 10%;
+}
+#background{
+    position:absolute;
+    vertical-align:top;
+    z-index:0;
+    display:block;
+    min-height:50%;
+    min-width:50%;
+}
+#backgroundtext
+{
+  font-family: mrseavespetite;
+  color:#DBC7AC;
+  font-size:20px;
 }
 #opener{
   margin-bottom: 5%;
 }
 #section1{
   background-image: url(imgs/map.jpg) ;
-  background-size: 100%;
   background-position: center;
+  -webkit-background-size: cover;
+  -moz-background-size: cover;
+  -o-background-size: cover;
+  background-size: cover;
+  /* background-size: 100% auto;
+  background-position: center; */
 }
 #section2{
-  background-image: url(imgs/shape.svg)
+  background-image: url(imgs/shapes.svg);
+  background-position: center;
+  -webkit-background-size: cover;
+  -moz-background-size: cover;
+  -o-background-size: cover;
+  background-size: cover;
 }
 #section3{
-  line-height: 200px;
+  background-image: url(imgs/text.svg);
+}
+#section4{
+  display: flex;
 }
 #menu li {
 	display:inline-block;
