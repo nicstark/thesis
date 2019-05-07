@@ -7,7 +7,7 @@ form,fieldset,input,textarea,p,blockquote,th,td {
     margin: 0;
 }
 
-@font-face {
+/* @font-face {
   font-family: mrseavessmallcaps;
   src: url(fonts/mrseavessmallcaps.otf);
   font-weight: normal;
@@ -23,6 +23,7 @@ form,fieldset,input,textarea,p,blockquote,th,td {
   src: url(fonts/mrseavespetite.otf);
   font-weight: normal;
 }
+*/
 @font-face {
   font-family: snell;
   font-weight: normal;
@@ -31,8 +32,9 @@ form,fieldset,input,textarea,p,blockquote,th,td {
 }
 a{
 	text-decoration:none;
-  font-family: mrseavessmallcaps;
-  font-weight: normal;
+  font-family: mrs-eaves-roman-all-small-ca, sans-serif;
+  font-weight: 400;
+  font-style: normal;
   font-size: 18px;
   margin:0;
   padding:0;
@@ -61,8 +63,9 @@ caption,th {
 
 }
 h1,h2,h3,h4,h5,h6 {
-    font-family: mrseavessmallcaps;
-    font-weight: normal;
+    font-family: mrs-eaves-roman-all-small-ca, sans-serif;
+    font-weight: 400;
+    font-style: normal;
     font-size: 100%;
     margin:0;
     padding:0;
@@ -98,8 +101,9 @@ h2{
   font-size: 48px;
 }
 h3{
-  font-family: mrseavespetite;
-  font-weight: normal;
+  font-family: mrs-eaves-roman-all-petite-c, sans-serif;
+  font-weight: 400;
+  font-style: normal;
   font-size: 25px;
   text-align: center;
 
@@ -206,7 +210,9 @@ transform: translate(-50%, -110%);
   width: 75%;
 }
 .button {
-  font-family: mrseavessmallcaps;
+  font-family: mrs-eaves-roman-all-small-ca, sans-serif;
+  font-weight: 400;
+  font-style: normal;
   background-color: #57452D; /* Green */
   border: solid;
   border-width: 1px;
@@ -251,20 +257,7 @@ transform: translate(-50%, -110%);
   font-size: 25px;
   padding-top: 60px;
 }
-#background{
-    position:absolute;
-    vertical-align:top;
-    z-index:0;
-    display:block;
-    min-height:50%;
-    min-width:50%;
-}
-#backgroundtext
-{
-  font-family: mrseavespetite;
-  color:#DBC7AC;
-  font-size:20px;
-}
+
 #opener{
   margin-bottom: 5%;
 }
@@ -291,6 +284,15 @@ transform: translate(-50%, -110%);
 }
 #section4{
   display: flex;
+}
+#section5{
+  style.display: none;
+}
+.webgl-content{
+  style.display: none;
+}
+#section5.load-webgl{
+  style.display: block;
 }
 #section6{
   position: relative;

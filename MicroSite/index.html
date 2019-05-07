@@ -8,16 +8,16 @@
 	<meta name="description" content="fullPage very simple demo." />
 	<meta name="keywords"  content="fullpage,jquery,demo,simple" />
 	<meta name="Resource-type" content="Document" />
-
+	<link rel="stylesheet" href="https://use.typekit.net/mnp8haz.css">
 	<link rel="stylesheet" type="text/css" href="dist/fullpage.css" />
 	<link rel="stylesheet" type="text/css" href="examples.css" />
 	<link rel="shortcut icon" href="TemplateData/favicon.ico">
 	<link rel="stylesheet" href="TemplateData/style.css">
 	<script src="TemplateData/UnityProgress.javascript"></script>
 	<script src="Build/UnityLoader.js"></script>
-	<script>
-			var gameInstance = UnityLoader.instantiate("gameContainer", "Build/Test Build.json", {onProgress: UnityProgress});
-	</script>
+	<script src="dist/jquery-3.4.1.min.js"></script>
+
+	<!-- <script>var gameInstance = UnityLoader.instantiate("gameContainer", "Build/Test Build.json", {onProgress: UnityProgress});</script> -->
 </head>
 <body>
 
@@ -33,15 +33,22 @@
 	<div class="section" id="section6"><div class="fin"><h2 class="cambriantitle2">Cambrian Analytica</h2><h4 class="generate">Generate your own:</h4> <a href="https://www.github.com/nicstark/thesis" class="button"><div class="buttontext">GITHUB</div></a></br>
 </div><a href="http://www.nicstark.com/" class="mysite"> NICSTARK.COM</a></div>
 
-
-
 <script type="text/javascript" src="dist/fullpage.js"></script>
 <script type="text/javascript">
+  var webglloaded = false;
 	var myFullpage = new fullpage('#fullpage', {
 		anchors: ['firstPage', 'secondPage', '3rdPage'],
 		sectionsColor: ['#F0E1C2','#F0E1C2','#F0E1C2','#F0E1C2','#F0E1C2','#F0E1C2','#F0E1C2','#F0E1C2','#F0E1C2','#F0E1C2','#F0E1C2','#F0E1C2'],
 		navigation: true,
 		navigationPosition: 'right',
+		onLeave: function(origin, destination, direction){
+			if(destination.index === 5 && webglloaded == false){
+				var gameInstance = UnityLoader.instantiate("gameContainer", "Build/Test Build.json", {onProgress: UnityProgress});
+				webglloaded = true;
+				 console.log('callback ran')
+			}
+		}
+
 		// navigationTooltips: ['First page', 'Second page', 'Third and last page']
 	});
 </script>
