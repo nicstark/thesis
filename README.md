@@ -12,6 +12,6 @@ Cambrian Analytica is a speculative design project that aims to answer the quest
 By using real personal data to generate zoomorphic incarnations of daily behavior, the project seeks to bring attention to the opportunities for self-reflection in a digital age.
 
 preview.png:
-https://raw.githubusercontent.com/nicstark/thesis/master/preview.png
+https://raw.githubusercontent.com/nicstark/thesis/master/1.png
 
 Name of creator(s) on the project and acknowledgment of other individuals involved: Nic Stark
