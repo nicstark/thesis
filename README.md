@@ -1,4 +1,4 @@
-# thesis
+# Cambrian Analytica
 
 Project title: Cambrian Analytica
 
@@ -15,3 +15,6 @@ preview.png:
 https://raw.githubusercontent.com/nicstark/thesis/master/1.png
 
 Name of creator(s) on the project and acknowledgment of other individuals involved: Nic Stark
+
+
+Keynote Files: 
