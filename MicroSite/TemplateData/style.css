@@ -70,12 +70,13 @@ body, html{
   font-family: mrseavessmallcaps;
   font-weight: normal;
   font-size: 100%;
-  margin:50px;
+  margin: 50px;
   padding:0;
   color:#241100;
 }
 .sk-circle {
   margin: 0 auto;
+  margin-bottom: 40%;
   width: 100px;
   height: 100px;
   position: relative;
@@ -93,7 +94,7 @@ body, html{
   margin: 0 auto;
   width: 15%;
   height: 15%;
-  background-color: #241100;
+  background-color: #57452D;
   border-radius: 100%;
   -webkit-animation: sk-circleBounceDelay 1.2s infinite ease-in-out both;
           animation: sk-circleBounceDelay 1.2s infinite ease-in-out both;

@@ -1,10 +1,10 @@
-# Cambrian Analytica
+﻿# Cambrian Analytica
 
 Project title: Cambrian Analytica
 
 Tag Line : What would it take for people to care about their personal data?
 
-URL: https://www.nicstark.com/cambriananalytica
+URL: http://www.nicstark.com/cambriananalytica
 
 Abstract:
 Cambrian Analytica is a speculative design project that aims to answer the question:
