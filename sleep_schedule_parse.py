@@ -192,7 +192,7 @@ def phoneParse():
                         myDict['SMS'].append(message)
 
                 try:
-                    if phone_object["Type"] != "SMS" and phone_object["Person"] and phone_object["Time"] and phone_object["Length"]:
+                    if phone_object["Type"] != "SMS":
                         myDict['Phone'].append(phone_object)
                 except:
                     continue
@@ -270,7 +270,6 @@ def calParse():
 
 #EMAIL__________________________________________________
 def emailParse():
-    emailcounter = 0
     def email_parse(email):
         print('parsing')
         email_object = {}
@@ -287,7 +286,6 @@ def emailParse():
                 t = datetime.strptime(str(emailDate), "%Y-%m-%d %H:%M:%S")
                 milli = unix_time_millis(t)
                 email_object['Date'] = int(milli)
-                print('success')
                 myDict['Email'].append(email_object)
                 break
             except:
@@ -297,8 +295,6 @@ def emailParse():
 
 
     for email in mailbox.mbox(root_path + mail_path):
-        print(emailcounter)
-        emailcounter +=1
         if email['X-Gmail-Labels']:
             if  any(filters in email['X-Gmail-Labels'] for filters in filter):
                 print("filtered")
@@ -306,6 +302,8 @@ def emailParse():
                 email_parse(email)
         else:
             email_parse(email)
+
+
 
 #ACTIVITY___________________________________________
 def activityParse():
@@ -320,34 +318,34 @@ def activityParse():
                 for line in fit_reader:
                     fit_object = {}
                     try:
-                        fit_object['Step Count'] = int(line['Step count'])
+                        fit_object['StepCount'] = int(line['Step count'])
                     except:
-                        fit_object['Step Count'] = 0;
+                        fit_object['StepCount'] = 0;
                     try:
                         fit_object['Sleep'] = int(line['Sleep duration (ms)'])
                     except:
                         fit_object['Sleep'] = 0
                     try:
-                        fit_object['Deep Sleep'] = int(line['Deep sleeping duration (ms)'])
+                        fit_object['DeepSleep'] = int(line['Deep sleeping duration (ms)'])
                     except:
-                        fit_object['Deep Sleep'] = 0
+                        fit_object['DeepSleep'] = 0
 
                     s = datetime.strptime(filename[:10] + " " + line['Start time'][0:8], "%Y-%m-%d %X")
                     milli = unix_time_millis(s)
-                    fit_object['Start Time'] = int(milli)
+                    fit_object['Start'] = int(milli)
                     e = datetime.strptime(filename[:10] + " " + line['End time'][0:8], "%Y-%m-%d %X")
                     milli = unix_time_millis(e)
-                    fit_object['End Time'] = int(milli)
-                    fit_object['Sleep Block'] = 'Real Entry'
-                    if fit_object['End Time'] < fit_object['Start Time']:
-                        fit_object['End Time'] = fit_object['Start Time'] + 900000
+                    fit_object['End'] = int(milli)
+                    fit_object['SleepBlock'] = 'Real Entry'
+                    if fit_object['End'] < fit_object['Start']:
+                        fit_object['End'] = fit_object['Start'] + 900000
 
                     myDict['Activity'].append(fit_object)
 
 
 
     # print('number of fit files',len(fitFilesRef))
-    myDictSpan  = myDict['Activity'][-1]['Start Time'] - myDict['Activity'][0]['Start Time']
+    myDictSpan  = myDict['Activity'][-1]['Start'] - myDict['Activity'][0]['Start']
     # print('my dict activity length', len(myDict['Activity']))
     # print('my dict span quartered', myDictSpan/900000)
     #print("Data span", humanDays(myDictSpan))
@@ -361,7 +359,7 @@ def activityParse():
         if fileGap >  86400000:
             gapStart = fitFilesRef[i-1] + 86400000
             while gapStart < fitFilesRef[i]:
-                myDict['Activity'].append({'Step Count' : 0, 'Sleep' : 0, 'Deep Sleep' : 0, 'Start Time' : int(gapStart), 'End Time' : int(gapStart + 900000), 'Sleep Block' : 'Fake Entry'})
+                myDict['Activity'].append({'StepCount' : 0, 'Sleep' : 0, 'DeepSleep' : 0, 'Start' : int(gapStart), 'End' : int(gapStart + 900000), 'SleepBlock' : 'Fake Entry'})
                 entryNum += 1
                 gapStart+= 900000
             gapCount += humanDays(fileGap) -1
@@ -370,7 +368,7 @@ def activityParse():
     #print('fake entries generated should be 25823', entryNum)
     # print('gap count', gapCount)
 
-    sortedActivity = sorted(myDict['Activity'], key=lambda k: k['Start Time'])
+    sortedActivity = sorted(myDict['Activity'], key=lambda k: k['Start'])
     myDict['Activity'] = sortedActivity
 
 
@@ -383,18 +381,18 @@ def activityParse():
     while i < len(myDict['Activity']) -1:
         #look for start of sleep block
         current = myDict['Activity'][i]
-        if current['Sleep'] > 0 or current['Deep Sleep'] > 0:
+        if current['Sleep'] > 0 or current['DeepSleep'] > 0:
             if sleepStarted == 0:
-                sleepStarted = current['Start Time']
-                current['Sleep Block'] = 'Real Start'
+                sleepStarted = current['Start']
+                current['SleepBlock'] = 'Real Start'
             sleepBreakTicker = 0
-        elif current['Sleep'] == 0 and current['Deep Sleep'] == 0 and sleepStarted != 0:
+        elif current['Sleep'] == 0 and current['DeepSleep'] == 0 and sleepStarted != 0:
             sleepBreakTicker += 1
             # if current['Start Time'] - sleepStarted < 3600000*2:
             #      pass
             if sleepBreakTicker == 10:
-                myDict['Activity'][i-10]['Sleep Block'] = 'Real End'
-                endSleep = myDict['Activity'][i-10]['Start Time']
+                myDict['Activity'][i-10]['SleepBlock'] = 'Real End'
+                endSleep = myDict['Activity'][i-10]['Start']
                 realSleepArray.append({'start': sleepStarted, 'end' : endSleep})
                 sleepStarted = 0
                 sleepBreak = 0
@@ -490,12 +488,12 @@ def activityParse():
     count = 0
     for entry in myDict['Activity']:
         for fakeday in fakeDaysArray:
-            if  abs(entry['Start Time'] == fakeday['start']):
+            if  abs(entry['Start'] == fakeday['start']):
                 count += 1
-                entry['Sleep Block'] = 'Fake Start'
+                entry['SleepBlock'] = 'Fake Start'
             #else append
-            if abs(fakeday['end'] == entry['End Time']):
-                entry['Sleep Block'] = 'Fake End'
+            if abs(fakeday['end'] == entry['End']):
+                entry['SleepBlock'] = 'Fake End'
 
 
     print('fake sleep blocks added, should be ~ 410',count)
@@ -516,7 +514,7 @@ def activityParse():
     j = 0
     lastValue = 0
     while j < len(myDict['Activity']):
-        if myDict['Activity'][j]['Sleep Block'] == 'Real Start' or myDict['Activity'][j]['Sleep Block'] == 'Fake Start':
+        if myDict['Activity'][j]['SleepBlock'] == 'Real Start' or myDict['Activity'][j]['SleepBlock'] == 'Fake Start':
             #name = str(myDict['Activity'][j]['Start Time'])
             value = myDict['Activity'][lastValue:j-1]
             if len(value) > 0:
@@ -685,7 +683,7 @@ def geoParse():
         i = 0
         while i < len(protoGeoArray)-1:
             myDict['Location'].append(protoGeoArray[i])
-            i +=3
+            i +=6
 
 #EXPORT_________________________________________
 
@@ -712,7 +710,7 @@ def exporter():
 
     for file in files['Activity']:
         try:
-            filename = str(file[0]['Start Time'])
+            filename = str(file[0]['Start'])
             jsonOutput('/Activity', filename, file)
         except:
             print("_______________________________________",file)
@@ -733,7 +731,7 @@ def exporter():
         searchHolder = []
 
         for search in myDict['Search']:
-            if search['Date'] > file[0]['Start Time'] and search['Date'] < file[-1]['End Time']:
+            if search['Date'] > file[0]['Start'] and search['Date'] < file[-1]['End']:
                 searchHolder.append(search)
         jsonOutput('/Search', filename, searchHolder)
 
@@ -741,7 +739,7 @@ def exporter():
         emailHolder = []
         for email in myDict['Email']:
             try:
-                if int(email['Date']) > int(file[0]['Start Time']) and int(email['Date']) < int(file[-1]['End Time']):
+                if int(email['Date']) > int(file[0]['Start']) and int(email['Date']) < int(file[-1]['End']):
                     emailHolder.append(email)
             except Exception as e:
                 print("Email ", e)
@@ -752,7 +750,7 @@ def exporter():
         geoHolder = []
         for geo in myDict['Location']:
             try:
-                if int(geo['Date']) > int(file[0]['Start Time']) and int(geo['Date']) < int(file[-1]['End Time']):
+                if int(geo['Date']) > int(file[0]['Start']) and int(geo['Date']) < int(file[-1]['End']):
                     geoHolder.append(geo)
             except Exception as e:
                 print("Location ", e)
@@ -763,7 +761,7 @@ def exporter():
         calHolder = []
         for event in myDict['Calendar']:
             try:
-                if int(event['Begin']) > int(file[0]['Start Time']) and int(event['Begin']) < int(file[-1]['End Time']):
+                if int(event['Begin']) > int(file[0]['Start']) and int(event['Begin']) < int(file[-1]['End']):
                     calHolder.append(event)
             except Exception as e:
                 print("Calendar ", e)
@@ -774,7 +772,7 @@ def exporter():
         screenHolder = []
         for entry in myDict['Screen']:
             try:
-                if int(entry['Date']) > int(file[0]['Start Time']) and int(entry['Date']) < int(file[-1]['End Time']):
+                if int(entry['Date']) > int(file[0]['Start']) and int(entry['Date']) < int(file[-1]['End']):
                     screenHolder.append(entry)
             except Exception as e:
                 print("Screen ", e)
@@ -785,7 +783,7 @@ def exporter():
         phoneHolder = []
         for entry in myDict['Phone']:
             try:
-                if int(entry['Date']) > int(file[0]['Start Time']) and int(entry['Date']) < int(file[-1]['End Time']):
+                if int(entry['Date']) > int(file[0]['Start']) and int(entry['Date']) < int(file[-1]['End']):
                     phoneHolder.append(entry)
             except Exception as e:
                 print("Phone ", e)
@@ -796,7 +794,7 @@ def exporter():
         smsHolder = []
         for entry in myDict['SMS']:
             try:
-                if int(entry['Date']) > int(file[0]['Start Time']) and int(entry['Date']) < int(file[-1]['End Time']):
+                if int(entry['Date']) > int(file[0]['Start']) and int(entry['Date']) < int(file[-1]['End']):
                     smsHolder.append(entry)
             except Exception as e:
                 print("SMS", e)
