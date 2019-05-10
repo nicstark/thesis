@@ -803,8 +803,8 @@ def exporter():
 
 
 activityParse()
-emailParse()
-# geoParse()
+# emailParse()
+geoParse()
 # searchParse()
 # financeParse()
 # calParse()
