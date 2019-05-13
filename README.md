@@ -17,4 +17,4 @@ https://raw.githubusercontent.com/nicstark/thesis/master/1.png
 Name of creator(s) on the project and acknowledgment of other individuals involved: Nic Stark
 
 
-Keynote Video: https://drive.google.com/file/d/1ZaO7Q6HXOCVheo2poT8MV8glIV2T1tvS/view?usp=sharing
+Keynote Video: https://drive.google.com/file/d/1uIy2AArXVQAdmDlxl4lgQRQd9arNUWAo/view?usp=sharing

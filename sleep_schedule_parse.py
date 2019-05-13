@@ -13,6 +13,7 @@ import os.path
 from pprint import pprint
 import pandas as pd
 import numpy as np
+import icalendar
 
 
 
@@ -36,16 +37,16 @@ realSleepArray = []
 sleep_object = {}
 protoGeoArray = []
 epoch = datetime.utcfromtimestamp(0)
-root_path = "C:/Users/eufou/Desktop/Data/"
+root_path = "C:/Users/eufou/Desktop/NewData/"
 citi_path = "Financial/Citi.CSV"
 usaa_path = "Financial/USAA_download.csv"
-fit_path = "Google/Fit/Daily Aggregations/"
+fit_path = "Takeout/Fit/Daily Aggregations/"
 rescue_path = "Screen Activity/rescuetime-activity-history.csv"
-search_path = "Google/My Activity/Search/MyActivity.html"
-phone_path = "Google/Voice/Calls/"
-calendar_path = "Google/Calendar/"
-geo_path = "Google/Location History/Location History.json"
-mail_path = "Google/Mail/All mail Including Spam and Trash.mbox"
+search_path = "Takeout/My Activity/Search/MyActivity.html"
+phone_path = "Takeout/Voice/Calls/"
+calendar_path = "Takeout/Calendar/"
+geo_path = "Takeout/Location History/Location History.json"
+mail_path = "Takeout/Mail/All mail Including Spam and Trash.mbox"
 fixDay = 0
 sleepStarted = 0
 endSleep = 0
@@ -253,18 +254,25 @@ def calParse():
     for filename in os.listdir(root_path + calendar_path):
         if filename.endswith(".ics"):
             with open (root_path + calendar_path + filename, 'r', encoding="utf8") as calendar_file:
+
                 c = Calendar(calendar_file.read())
 
                 for event in c.events:
-                    formatEvent = {}
-                    formatEvent['Title'] = event.name
-                    b = datetime.strptime(str(event.begin)[:-6], "%Y-%m-%dT%X")
-                    milliBegin = unix_time_millis(b)
-                    formatEvent['Begin'] = int(milliBegin)
-                    e = datetime.strptime(str(event.end)[:-6], "%Y-%m-%dT%X")
-                    milliEnd = unix_time_millis(e)
-                    formatEvent['End'] = int(milliEnd)
-                    myDict['Calendar'].append(formatEvent)
+                    try:
+                        formatEvent = {}
+                        formatEvent['Title'] = event.name
+                        b = datetime.strptime(str(event.begin)[:-6], "%Y-%m-%dT%X")
+                        milliBegin = unix_time_millis(b)
+                        formatEvent['Begin'] = int(milliBegin)
+                        e = datetime.strptime(str(event.end)[:-6], "%Y-%m-%dT%X")
+                        milliEnd = unix_time_millis(e)
+                        formatEvent['End'] = int(milliEnd)
+                        myDict['Calendar'].append(formatEvent)
+
+                    except:
+                        continue
+
+
 
 
 
@@ -312,6 +320,8 @@ def activityParse():
         if filename.endswith(".csv") and filename != "Daily Summaries.csv":
             filenameUnix = datetime.strptime(filename[:10], "%Y-%m-%d")
             milli = unix_time_millis(filenameUnix)
+            if milli < 1484008200000:
+                continue
             fitFilesRef.append(milli)
             with open (root_path + fit_path + filename, 'r', encoding="utf8") as fit_csv:
                 fit_reader = csv.DictReader(fit_csv)
@@ -341,6 +351,8 @@ def activityParse():
                         fit_object['End'] = fit_object['Start'] + 900000
 
                     myDict['Activity'].append(fit_object)
+    print(len(myDict['Activity']))
+    print(myDict['Activity'][-1])
 
 
 
@@ -388,8 +400,7 @@ def activityParse():
             sleepBreakTicker = 0
         elif current['Sleep'] == 0 and current['DeepSleep'] == 0 and sleepStarted != 0:
             sleepBreakTicker += 1
-            # if current['Start Time'] - sleepStarted < 3600000*2:
-            #      pass
+
             if sleepBreakTicker == 10:
                 myDict['Activity'][i-10]['SleepBlock'] = 'Real End'
                 endSleep = myDict['Activity'][i-10]['Start']
@@ -423,12 +434,7 @@ def activityParse():
             del realSleepArray[i]
 
         i+=1
-    # print('total time span of data set :', humanDays(realSleepArray[-1]['end'] - realSleepArray[0]['start']))
-    # #
-    # print("Real sleep blocks", len(realSleepArray))
 
-    #242 sleep blocks out of 652 days in total
-    #iterating over real sleep blocks
     i = 1
     numblockcounter = 0
     daysCounter = 0
@@ -496,26 +502,12 @@ def activityParse():
                 entry['SleepBlock'] = 'Fake End'
 
 
-    print('fake sleep blocks added, should be ~ 410',count)
 
-    # starter = 0;
-    # ender = 0;
-    # starterCount = 0;
-    # for entry in myDict['Activity']:
-    #     if entry['Sleep Block'] == 'Real Start' or entry['Sleep Block'] == 'Fake Start':
-    #         starter = entry['Start Time']
-    #         starterCount +=1
-    #     if entry['Sleep Block'] == 'Real End' or entry['Sleep Block'] == 'Fake End':
-    #         ender = entry['Start Time']
-    #         starterCount = 0
-    #     if starterCount > 1:
-    #         print('fuck')
 
-    j = 0
-    lastValue = 0
+    j = 1
+    lastValue = 1
     while j < len(myDict['Activity']):
         if myDict['Activity'][j]['SleepBlock'] == 'Real Start' or myDict['Activity'][j]['SleepBlock'] == 'Fake Start':
-            #name = str(myDict['Activity'][j]['Start Time'])
             value = myDict['Activity'][lastValue:j-1]
             if len(value) > 0:
                 ActivityFiles.append(value)
@@ -524,26 +516,11 @@ def activityParse():
         j += 1
 
 
-
-    # print(len(files))
-    print('activity files length ',len(ActivityFiles))
     files['Activity'] = ActivityFiles
-    print('files - activity length', len(files['Activity']))
 
-    # for file in files['Activity']:
-    #     try:
-    #         print(file[0])
-    #     except:
-    #         print(file)
 
-    # print(len(files['Activity']))
-    # print(files['Activity'][0])
 
-    #print('activity file span ', humanDays(ActivityFiles[-1][0]['End Time'] - ActivityFiles[1][0]['Start Time']))
-    # for entry in ActivityFiles:
-    #     files.append(entry)
 
-    # print(len(files))
 
 
 #FINANCIAL____________________________________________
@@ -595,7 +572,7 @@ def financeParse():
 
     filteredTransactions = []
     for transaction in myDict['Transactions']:
-        if transaction['Date'] > myDict['Activity'][0]['Start Time'] and transaction['Date'] < myDict['Activity'][-1]['End Time']:
+        if transaction['Date'] > myDict['Activity'][0]['Start'] and transaction['Date'] < myDict['Activity'][-1]['End']:
             filteredTransactions.append(transaction)
     myDict['Transactions'] = filteredTransactions
 
@@ -687,12 +664,12 @@ def geoParse():
 
 #EXPORT_________________________________________
 
-dir = ('C:/Users/eufou/Desktop/Parsed')
+dir = ('C:/Users/eufou/Desktop/NewParsed')
 if not os.path.exists(dir):
     os.mkdir(dir)
 
 for key in myDict:
-    subdir = ('C:/Users/eufou/Desktop/Parsed/' + key)
+    subdir = (dir +"/" + key)
     if not os.path.exists(subdir):
         os.mkdir(subdir)
 
@@ -721,10 +698,8 @@ def exporter():
             transactionDate = datetime.fromtimestamp(transaction['Date']/1000).strftime('%Y-%m-%d')
             if datetime.fromtimestamp(int(filename)/1000).strftime('%Y-%m-%d') == transactionDate:
                 transactionHolder.append(transaction)
-        try:
-            transactionHolder = sorted(transactionHolder, reverse = True, key=lambda k: abs(float(k['Amount'])))
-        except:
-            pass
+        transactionHolder = sorted(transactionHolder, reverse = True, key=lambda k: abs(float(k['Amount'])))
+
         jsonOutput('/Transactions', filename, transactionHolder)
 
     #EXPORT SEARCH______________________
@@ -804,9 +779,9 @@ def exporter():
 
 activityParse()
 # emailParse()
-geoParse()
+# geoParse()
 # searchParse()
-# financeParse()
+financeParse()
 # calParse()
 # screenParse()
 # phoneParse()
