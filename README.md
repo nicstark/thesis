@@ -11,10 +11,15 @@ Cambrian Analytica is a speculative design project that aims to answer the quest
 “What would it take for people to care about their personal data?”
 By using real personal data to generate zoomorphic incarnations of daily behavior, the project seeks to bring attention to the opportunities for self-reflection in a digital age.
 
-preview.png:
+Preview Image:
 https://raw.githubusercontent.com/nicstark/thesis/master/1.png
 
-Name of creator(s) on the project and acknowledgment of other individuals involved: Nic Stark
+Created by: Nic Stark
 
+# If you are interested in generating your own please utilize the Python parsing script. I currently takes Google Takeout, financial data from USAA and Citi bank and screen time data from RescueTime.
 
-Keynote Video: https://drive.google.com/file/d/1uIy2AArXVQAdmDlxl4lgQRQd9arNUWAo/view?usp=sharing
+Once your data has been parsed ( it might take a while depends on the size of your collection ) you can open up the Unity project and copy the folders from the newly created Parsed folder into the Resources folder in Unity.
+
+Please get in touch if you have any questions!
+
+-Nic
