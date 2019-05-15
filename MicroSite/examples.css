@@ -286,13 +286,13 @@ transform: translate(-50%, -110%);
   display: flex;
 }
 #section5{
-  style.display: none;
+  /* style.display: none; */
 }
 .webgl-content{
-  style.display: none;
+  /* style.display: none; */
 }
 #section5.load-webgl{
-  style.display: block;
+  /* style.display: block; */
 }
 #section6{
   position: relative;
